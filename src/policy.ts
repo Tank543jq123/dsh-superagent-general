@@ -114,7 +114,8 @@ export const POLICY_REVISION = 'mandate-v3'
  * Changes to models, concurrency, pause state, or polling intervals do not invalidate existing decisions.
  */
 export function policyVersion(settings: Settings): string {
-  return key(POLICY_REVISION, JSON.stringify({ rules: settings.policy.rules, mode: settings.eval.mode, sources: settings.policy.sources }))
+  const filters = Object.fromEntries(Object.entries(settings.sources).filter(([, source]) => source.config.positiveKeywords || source.config.negativeKeywords).map(([id, source]) => [id, { positiveKeywords: source.config.positiveKeywords ?? '', negativeKeywords: source.config.negativeKeywords ?? '' }]))
+  return key(POLICY_REVISION, JSON.stringify({ rules: settings.policy.rules, mode: settings.eval.mode, sources: settings.policy.sources, filters }))
 }
 export function allowedSender(settings: Settings, actor: ActorRef): z.infer<typeof AllowedSchema> | undefined {
   return settings.policy.sources[actor.source]?.allowed.find(entry => sameName(entry.id, actor.id))
@@ -189,6 +190,11 @@ export function settingsPolicy(settings: Settings, sources: SourceScope): Policy
   return {
     version, paused: settings.paused, evalTimeoutMs: settings.eval.timeoutSeconds * 1000,
     gate(trigger: Trigger, thread, tickets) {
+      const config = settings.sources[trigger.source]?.config ?? {}
+      const words = (key: string) => String(config[key] ?? '').split(/[，,\n]/).map(x => x.trim().normalize('NFKC').toLowerCase()).filter(Boolean)
+      const text = trigger.text.normalize('NFKC').toLowerCase(), negative = words('negativeKeywords'), positive = words('positiveKeywords')
+      if (negative.some(word => text.includes(word)) || (positive.length > 0 && !positive.some(word => text.includes(word)))) return { admissible: false, reason: 'admission_ignored' }
+
       if (!trigger.human) return machineGate(trigger)
       const allowed = allowedSender(settings, trigger.actor)
       const scope = listened(sources, trigger.source, trigger.meta)

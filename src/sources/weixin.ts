@@ -30,6 +30,8 @@ export { SOURCE, weixinTrigger, weixinTriggerId, weixinConversation } from './we
 const WeixinConfigSchema = z.object({
   directMessages: z.boolean().default(true),
   otherChats: z.enum(['none', 'all']).default('none'),
+  positiveKeywords: z.string().max(4000).default(''),
+  negativeKeywords: z.string().max(4000).default(''),
   pollSeconds: z.number().int().min(2).max(300).default(5),
 }).strict()
 export type WeixinConfig = z.infer<typeof WeixinConfigSchema>
@@ -70,6 +72,10 @@ export const weixinKind: SourceKind<WeixinConfig> = {
     { key: 'otherChats', type: 'select', label: { zh: '其他会话', en: 'Other chats' },
       options: [{ value: 'none', label: { zh: '不接收', en: 'Not received' } }, { value: 'all', label: { zh: '全部消息', en: 'All messages' } }],
       hint: { zh: '群聊消息。默认不接收：微信入口只承担可信指令，群聊噪音交给策略准入决定。', en: 'Group messages. Not received by default: the Weixin entry carries trusted instructions only, and group noise is left to Policy admission.' } },
+    { key: 'positiveKeywords', type: 'text', label: { zh: '关注关键词', en: 'Positive keywords' },
+      hint: { zh: '用逗号分隔，留空表示不限；候选消息至少包含一个。注意：这是 Source 级过滤，对所有者私聊同样生效，默认留空。', en: 'Comma-separated; blank allows all. Source-level: it also filters the owner\'s direct messages, so leave blank by default.' } },
+    { key: 'negativeKeywords', type: 'text', label: { zh: '忽略关键词', en: 'Negative keywords' },
+      hint: { zh: '用逗号分隔；命中任一词就忽略，优先于关注词。', en: 'Comma-separated; a negative match excludes a message and wins over positive keywords.' } },
     { key: 'binding', type: 'fact', label: { zh: '微信绑定', en: 'Weixin binding' },
       hint: { zh: '本 Source 自己的微信绑定，独立于其他程序的连接。未绑定时请用「扫码登录」。', en: "This Source's own Weixin binding, independent of any other program. When unbound, use Sign in." } },
     { key: 'pollSeconds', type: 'number', advanced: true, min: 2, max: 300, label: { zh: '轮询间隔 / 秒', en: 'Polling interval / seconds' } },

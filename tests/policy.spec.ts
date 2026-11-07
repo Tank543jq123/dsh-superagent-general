@@ -484,3 +484,30 @@ describe('bots and events without a sender', () => {
       ['ci', { listedUnaddressed: false, unlistedAddressed: false, unlistedUnaddressed: false }]])
   })
 })
+
+describe('keyword filter on a Source', () => {
+  const keywordTrigger = (text: string): Trigger => ({ id: 'k', source: 'weixin', threads: [{ source: 'weixin', id: 'owner' }],
+    actor: { source: 'weixin', id: 'owner' }, human: true, addressed: 'direct', at: '', text, meta: { direct: true } })
+  const keywordSettings = (positive = '', negative = '') => SettingsSchema.parse({
+    sources: { weixin: { config: { positiveKeywords: positive, negativeKeywords: negative } } },
+    policy: { sources: { weixin: { allowed: [{ id: 'owner' }] } } },
+  })
+  const keywordPolicy = (positive = '', negative = '') => settingsPolicy(keywordSettings(positive, negative),
+    { scope: () => ({ listened: true, observed: false, row: 'direct' }) })
+  const keywordThread = { key: 'weixin:owner', ref: { source: 'weixin', id: 'owner' }, createdAt: '', subscriptions: [], correlated: [], pending: [], meta: {} } as Thread
+
+  it('applies negative keywords before positive ones and leaves an empty filter open', () => {
+    expect(keywordPolicy('工具', '广告').gate(keywordTrigger('工具广告'), keywordThread, []).admissible).toBe(false)
+    expect(keywordPolicy('工具', '广告').gate(keywordTrigger('工具调研'), keywordThread, []).admissible).toBe(true)
+    expect(keywordPolicy('', '').gate(keywordTrigger('广告'), keywordThread, []).admissible).toBe(true)
+  })
+
+  it('includes keyword changes in the policy version but ignores display-only settings', () => {
+    const base = keywordSettings('工具', '')
+    const changed = keywordSettings('工具', '广告')
+    const displayOnly = structuredClone(base)
+    displayOnly.sources.weixin!.config.pollSeconds = 30
+    expect(policyVersion(changed)).not.toBe(policyVersion(base))
+    expect(policyVersion(displayOnly)).toBe(policyVersion(base))
+  })
+})
