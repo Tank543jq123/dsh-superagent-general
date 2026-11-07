@@ -321,6 +321,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/app/store.ts` | The Store, and `Receipt`, a message of the outbox |
 | `src/app/store-read.ts` | `storeReads`: the Store's read queries for the views, the tools and the Sources' polls, which never write |
 | `src/app/migration.ts` | The schema 11 migration: one step from schema 10 that writes every stored record in its current shape |
+| `src/app/legacy-import.ts` | One-time import of the first build's settings and prompts; not wired into Runtime in this fork, and tested as a standalone migration helper |
 | `src/app/effects.ts` | Effects |
 | `src/app/versions.ts` | `Versions`: a record kept as numbered snapshots with a pointer to the current one, for the settings and the prompts |
 | `src/app/cache.ts` | `TextCache`: texts kept in memory within a size, the least recently used dropped first |
@@ -368,6 +369,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/sources/github-channel.ts` | The GitHub Channel: comments and review thread replies, `sent` or `gone` |
 | `src/sources/github-read.ts` | CI snapshots, repository reads, the `github/` resources, and `githubThreadContext`: an Issue's or pull request's conversation by page |
 | `src/sources/feishu.ts` | The Feishu kind and plugin entry, exported as `./feishu-watch` |
+| `src/sources/feishu-sdk.ts` | The Feishu application-SDK transport: credentials, API calls, long-connection events and the reader facade used when an app secret is configured |
 | `src/sources/feishu-trigger.ts` | Feishu messages as Triggers, by one rule for live events, history pages and topic pages |
 | `src/sources/weixin.ts` | The Weixin kind and plugin entry, exported as `./weixin-watch`: the trusted instruction entry, polling the bot connection DeepSeek Harness's IM plugin established |
 | `src/sources/weixin-trigger.ts` | Weixin messages as Triggers: one message is one Trigger, its conversation is its Thread |

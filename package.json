@@ -1,10 +1,10 @@
 {
   "name": "dsh-superagent",
-  "author": "DeepSeek Harness Team <team@dsh.dev>",
+  "author": "dsh-superagent contributors; SuperAgent-General adaptation by ZhangJia (comeonzhj); upstream: DeepSeek Harness Team",
   "license": "MIT",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "private": true,
-  "description": "A proactive agent for one GitHub repository, as a DSH (DeepSeek Harness) bundle: it listens to GitHub and optionally Feishu, evaluates requests under a Policy, turns authorized ones into Tickets, and executes each in its own DSH Session.",
+  "description": "A general proactive agent for DeepSeek Harness: GitHub, Feishu and Weixin Sources, Policy-gated tickets, and one DSH Session per ticket.",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -130,13 +130,5 @@
     "@types/react-dom": "18.3.7",
     "@deepseek-ai/dsh-subprocess": "0.2.1-alpha.2",
     "unrun": "^0.3.1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/comeonzhj/SuperAgent-General.git"
-  },
-  "homepage": "https://github.com/comeonzhj/SuperAgent-General#readme",
-  "bugs": {
-    "url": "https://github.com/comeonzhj/SuperAgent-General/issues"
   }
 }
