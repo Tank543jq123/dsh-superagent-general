@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const publicDocs = ['docs/000-philosophy.md', 'docs/001-domain.md', 'docs/002-authorization.md', 'docs/003-execution.md', 'docs/004-prompts.md', 'docs/005-panel.md', 'docs/006-deployment.md', 'docs/007-architecture.md', 'docs/008-cookbook.md', 'docs/ARCHITECTURE.md', 'docs/PROMPTS.md', 'docs/UPSTREAM.md', 'docs/USER-GUIDE.md', 'docs/009-general-upgrade.md']
-const documents = ['README.md', 'src/README.md', 'src/CHANGELOG.md', ...publicDocs]
+const documents = ['README.md', 'README.en.md', 'src/README.md', 'src/CHANGELOG.md', ...publicDocs]
 const read = (path: string): string => readFileSync(join(ROOT, path), 'utf8')
 const manifest = JSON.parse(read('package.json')) as { files: string[]; scripts: Record<string, string>; dependencies: Record<string, string>; devDependencies: Record<string, string>; peerDependencies: Record<string, string> }
 const sourceFiles = (directory: string): string[] => readdirSync(join(ROOT, directory), { recursive: true, withFileTypes: true }).filter(entry => entry.isFile() && /\.tsx?$/.test(entry.name)).map(entry => join(entry.parentPath, entry.name))
