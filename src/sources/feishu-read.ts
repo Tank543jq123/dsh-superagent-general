@@ -58,7 +58,8 @@ async function sourceOf(commands: Commands, ref: FeishuRef) {
   const listed = await commands.lark(['api', 'GET', '/open-apis/im/v1/messages/mget', '--params', params])
   const sourceResult = z.object({ items: z.array(sourceSchema) }).parse(listed)
   const source = sourceResult.items.find(message => message.message_id === id)
-  if (!source || source.deleted) throw new Error('The source Feishu message is unavailable or deleted; retained trigger text is still readable')
+  if (!source) throw new Error('飞书未返回原消息，请检查读取权限或查询参数；已保存的触发内容仍可读取。')
+  if (source.deleted) throw new Error('飞书已标记原消息为删除；已保存的触发内容仍可读取。')
   if (source.chat_id !== ref.chatId) throw new Error('Feishu source chat does not match the accepted trigger')
   return source
 }

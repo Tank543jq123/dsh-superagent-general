@@ -1088,7 +1088,7 @@ describe('feishu event consumer', () => {
     ...type === 'group' ? { mentions: [{ id: 'ou_bot', name: 'Bot' }] } : {} })
   it('takes in the event lines it reads, records each chat as direct or not, and reports a malformed line without stopping', async () => {
     writeFileSync(join(dir, 'events'), [event('om_1', 'oc_group', 'group'), event('om_2', 'oc_dm', 'p2p'), 'not json',
-      event('om_3', 'oc_group', 'group')].join('\n') + '\n')
+      event('om_3', 'oc_group', 'group'), 'not json'].join('\n') + '\n')
     const { ctx, health, store } = consumerSource(cli('events'))
     running = runFeishu(ctx, controller.signal)
     await vi.waitFor(() => expect(store.triggers.get(feishuTriggerId('om_3'))).toBeDefined(), until)

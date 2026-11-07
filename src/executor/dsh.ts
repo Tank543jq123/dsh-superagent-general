@@ -86,12 +86,11 @@ export const sourceTrigger = (host: { store: Pick<Store, 'triggers'> }, ticket: 
 
 /**
  * Returns additional system-prompt mandate instructions for a worker beyond the request: for work accepted proactively under
- * rules (`strength === 'inferred'`), restricts authorization to small internal changes within the rule scope; returns `''` for explicit requests.
+ * rules (`strength === 'inferred'`), restricts authorization to the accepted task and matched rule scope; returns `''` for explicit requests.
  */
 export function mandateInstructions(mandate: Pick<Mandate, 'strength'>): string {
-  return mandate.strength === 'inferred' ? 'This ticket has limited proactive authorization. Independently verify that it is a small change '
-    + 'internal to one module within the accepted rule scope. If it requires public-interface or behavior changes, new interaction, product '
-    + 'decisions or clarification, stop and report dropped; do not expand scope.' : ''
+  return mandate.strength === 'inferred' ? '此工单来自主动接单。自行核实原始目标与授权，只执行命中规则和已接受范围内的任务。'
+    + '常规执行方法由你选择；发现超出范围或缺少必要目标、授权时停止并报告 dropped，不扩大任务。' : ''
 }
 /** Builds a newly accepted ticket's Execution metadata: its worktree name, workspace directory, and assignment text. */
 export function ticketExecution(ticket: Ticket, outcome: Extract<AssessmentOutcome, { kind: 'accept' }>, settings: Settings,

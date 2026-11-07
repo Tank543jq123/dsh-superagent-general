@@ -1,4 +1,5 @@
 /** Block-scoped settings validation, optimistic concurrency saves, processing pause control, and source policy synchronization. */
+import { randomUUID } from 'node:crypto'
 import type { Context } from '@deepseek-ai/cordis'
 import { z } from 'zod'
 import { UserError, type EngineForSettings } from '../core/index.ts'
@@ -68,7 +69,7 @@ export interface SettingsHost {
   /** Source host passed to source kinds' policy syncs and label refreshes. */
   readonly sourceHost: SourceHost
   /** Setup state, account/command checks, and restart trigger when setup-read fields change. */
-  readonly setup: Pick<Setup, 'configured' | 'checkAccounts' | 'blockCommands' | 'restart'>
+  readonly setup: Pick<Setup, 'configured' | 'checkAccounts' | 'blockCommands' | 'restart'> & Partial<Pick<Setup, 'saveCredential'>>
   /** Triggers an immediate pass so work newly allowed by a settings save runs right away. */
   requestPass(): void
 }
@@ -154,6 +155,13 @@ export class Settings {
     if (!(kind in BLOCKS)) throw new UserError('unknownBlock', { block })
     const rules = BLOCKS[kind as keyof typeof BLOCKS]
     if (kind === 'source' && !sources.kind(id)) throw new UserError('sourceNotInstalled', { source: id })
+    if (block === 'source:feishu' && value && typeof value === 'object') {
+      const source = value as { config?: Record<string, unknown> }
+      if (typeof source.config?.appSecret === 'string' && source.config.appSecret) {
+        if (origin !== 'panel') throw new Error('飞书凭证只能在设置页面修改。')
+        source.config.credentialVersion = randomUUID()
+      }
+    }
     const parsed = rules.parse(value, sources, id)
     const current = store.settings()
     const candidate = rules.merge(current, parsed, id)
@@ -166,6 +174,13 @@ export class Settings {
     rules.guard?.(current, candidate, origin)
     if (setupChanged(current, candidate)) await this.host.setup.checkAccounts(block, candidate)
     if (stale()) throw new SettingsConflict('Settings changed during the checks. Reload before saving.')
+    if (block === 'source:feishu') {
+      const source = parsed as { config?: Record<string, unknown> }
+      if (typeof source.config?.appSecret === 'string' && source.config.appSecret) {
+        this.host.setup.saveCredential?.(String(source.config.appId), source.config.appSecret)
+        source.config.appSecret = ''
+      }
+    }
     // Re-read current settings after async checks in case unrelated blocks were saved concurrently.
     const old = store.settings()
     const settings = rules.merge(old, parsed, id)

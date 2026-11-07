@@ -3,6 +3,8 @@ import { fill } from './infra/text.ts'
 
 export type SetupPlace = 'deployment' | 'github' | 'feishu'
 export const SETUP_PROBLEMS = {
+  feishuSecretMissing: ['feishu', '请填写飞书应用密钥。已保存的密钥留空可继续使用。'],
+  feishuCredentialsInvalid: ['feishu', '无法验证飞书应用，请检查应用编号、密钥，以及机器人是否已启用并发布。'],
   foreignFile: ['deployment', '{file} was not written by dsh-superagent; move it, or choose another state directory.'],
   gitTooOld: ['deployment', 'git does not read the github.com credential configuration dsh-superagent writes; dsh-superagent needs git 2.32 or later.'],
   environmentFailed: ['deployment', 'Preparing the agent environment failed.'],
@@ -17,7 +19,7 @@ export const SETUP_PROBLEMS = {
   feishuCliFailed: ['feishu', 'The bot lark-cli does not work.'],
   feishuNoApp: ['feishu', 'auth status of the bot lark-cli did not report the app.'],
   feishuBotNotReady: ['feishu', 'The bot identity of app {app} is {status}; configure the app secret with lark-cli.'],
-  feishuUserIdentity: ['feishu', 'The bot lark-cli allows user identities (strict mode {mode}); give the bot its own lark-cli configuration in strict mode bot, as docs/006-deployment.md describes.'],
+  feishuUserIdentity: ['feishu', 'The bot lark-cli allows user identities (strict mode {mode}); give the bot its own lark-cli configuration in strict mode bot, as docs/USER-GUIDE.md describes.'],
   feishuNoBot: ['feishu', 'The Feishu bot API did not return the bot\'s open_id.'],
 } as const satisfies Record<string, readonly [SetupPlace, string]>
 export type SetupCode = keyof typeof SETUP_PROBLEMS

@@ -1,68 +1,46 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const NUMBERED = /^(\d{3})-[a-z0-9-]+\.md$/
-const numbered = readdirSync(join(ROOT, 'docs')).filter(name => NUMBERED.test(name)).sort()
-const entries = ['README.md', 'SETUP.md']
-const documents = [...entries, ...readdirSync(join(ROOT, 'docs')).filter(name => name.endsWith('.md')).map(name => `docs/${name}`)]
+const publicDocs = ['docs/USER-GUIDE.md', 'docs/UPSTREAM.md', 'docs/ARCHITECTURE.md', 'docs/PROMPTS.md']
+const documents = ['README.md', 'src/README.md', 'src/CHANGELOG.md', ...publicDocs]
 const read = (path: string): string => readFileSync(join(ROOT, path), 'utf8')
-function links(file: string): string[] {
-  return [...readFileSync(file, 'utf8').matchAll(/\]\(([^)\s]+)\)/g)].map(match => match[1]!.split('#')[0]!).filter(target => target && !/^[a-z]+:/.test(target))
-}
-const files = (directory: string): string[] => readdirSync(join(ROOT, directory), { recursive: true, withFileTypes: true })
-  .filter(entry => entry.isFile()).map(entry => relative(ROOT, join(entry.parentPath, entry.name)))
-/**
- * Extract repo-relative file paths from the first column of a table under `## <heading>` in `docs/007-architecture.md`.
- * Bare filenames inherit the directory of the preceding path in the same cell.
- */
-function listed(heading: string): string[] {
-  const lines = read('docs/007-architecture.md').split('\n')
-  const start = lines.indexOf(`## ${heading}`)
-  const end = lines.findIndex((line, index) => index > start && line.startsWith('## '))
-  // The first two rows are the header and its separator.
-  const rows = lines.slice(start, end < 0 ? undefined : end).filter(line => line.startsWith('| ')).slice(2)
-  return rows.flatMap(row => {
-    let directory = ''
-    return [...row.split('|')[1]!.matchAll(/`([^`]+)`/g)].map(([, name]) => {
-      if (!name!.includes('/')) return join(directory, name!)
-      directory = dirname(name!)
-      return name!
-    })
-  })
+const manifest = JSON.parse(read('package.json')) as { files: string[]; scripts: Record<string, string>; dependencies: Record<string, string>; devDependencies: Record<string, string>; peerDependencies: Record<string, string> }
+const sourceFiles = (directory: string): string[] => readdirSync(join(ROOT, directory), { recursive: true, withFileTypes: true }).filter(entry => entry.isFile() && /\.tsx?$/.test(entry.name)).map(entry => join(entry.parentPath, entry.name))
+function localLinks(file: string): string[] {
+  return [...read(file).matchAll(/\]\(([^)\s]+)\)/g)].map(match => match[1]!.split('#')[0]!).filter(target => target && !/^[a-z]+:/.test(target))
 }
 
-describe('documentation', () => {
-  it('numbers documents consecutively from 000', () => {
-    expect(numbered.map(name => name.slice(0, 3))).toEqual(numbered.map((_, index) => String(index).padStart(3, '0')))
-  })
-  it('links numbered documents only to earlier numbered documents', () => {
-    const violations = numbered.flatMap(name => links(join(ROOT, 'docs', name)).flatMap(target => {
-      const linked = resolve(ROOT, 'docs', target)
-      if (!linked.endsWith('.md')) return []
-      const number = NUMBERED.exec(linked.slice(linked.lastIndexOf('/') + 1))?.[1]
-      return dirname(linked) === join(ROOT, 'docs') && number !== undefined && number < name.slice(0, 3) ? [] : [`${name} → ${target}`]
-    }))
-    expect(violations).toEqual([])
-  })
-  it('resolves every local link', () => {
-    const files = [...entries.map(name => join(ROOT, name)), ...numbered.map(name => join(ROOT, 'docs', name))]
-    const missing = files.flatMap(file => links(file).filter(target => !existsSync(resolve(dirname(file), target))).map(target => `${file.slice(ROOT.length + 1)} → ${target}`))
+describe('public documentation and distribution', () => {
+  it('resolves links in current project documentation without reference documents', () => {
+    const missing = documents.flatMap(file => localLinks(file).filter(target => !existsSync(resolve(ROOT, dirname(file), target))).map(target => `${file} → ${target}`))
     expect(missing).toEqual([])
   })
-  it('leaves no merge conflict markers in any document', () => {
-    expect(documents.filter(path => /^(<{7}|>{7}) /m.test(read(path)))).toEqual([])
+  it('contains no unresolved merge markers in public documentation', () => {
+    expect(documents.filter(file => /^(<{7}|>{7}) /m.test(read(file)))).toEqual([])
   })
-  it('lists every module of src in the module table of 007 Architecture, and only files that exist', () => {
-    const modules = listed('Modules')
-    expect(files('src').filter(path => !modules.includes(path))).toEqual([])
-    expect(modules.filter(path => !existsSync(join(ROOT, path)))).toEqual([])
+  it('packages only the maintained public documents', () => {
+    expect(manifest.files.filter(file => file.startsWith('docs/')).sort()).toEqual([...publicDocs].sort())
+    expect(manifest.files).not.toContain('docs')
   })
-  it('lists every test in the test table of 007 Architecture, and only files that exist', () => {
-    const tests = listed('Tests')
-    expect(files('tests').filter(path => /\.spec\.tsx?$/.test(path) && !tests.includes(path))).toEqual([])
-    expect(tests.filter(path => !existsSync(join(ROOT, path)))).toEqual([])
+  it('builds before packing and includes all runtime asset families', () => {
+    expect(manifest.scripts.prepack).toBe('pnpm build')
+    for (const family of ['lib', 'cordis.patch.yml', 'prompts', 'skills', 'locale/*.json', 'LICENSE']) expect(manifest.files).toContain(family)
+  })
+  it('uses declared registry dependencies without machine-local package links', () => {
+    const invalid = Object.entries({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies }).filter(([, version]) => /^(?:file:|link:|workspace:|\/|\.\.?\/)/.test(version))
+    expect(invalid).toEqual([])
+  })
+  it('resolves source-relative imports entirely within the checked-out project', () => {
+    const missing = [...sourceFiles('src'), ...sourceFiles('tests')].flatMap(file => {
+      const source = readFileSync(file, 'utf8')
+      return [...source.matchAll(/\bfrom\s+['"](\.[^'"]+)['"]/g)].flatMap(match => {
+        const target = resolve(dirname(file), match[1]!.split('?')[0]!)
+        return target.startsWith(ROOT + '/') && existsSync(target) ? [] : [`${file}: ${match[1]}`]
+      })
+    })
+    expect(missing).toEqual([])
   })
 })

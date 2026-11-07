@@ -96,6 +96,7 @@ it('renders each Source\'s settings from its kind\'s fields and saves one Source
 it('shows the account each CLI signs in as, and keeps a saved CLI on screen while dsh-superagent restarts', async () => {
   await mount()
   await click(tab(zh['tab.settings']))
+  await click(find(zh['settingsGroup.source'], '.dt-settings-link'))
   const github = all('.dt-card')[1]!
   expect(github.textContent).toContain('当前账号 @agent-bot')
   const labels = () => [...github.querySelectorAll('label')].map(label => label.textContent)
@@ -212,9 +213,9 @@ it('shows a refused Source save with the output of the tool that failed on its o
   await click(zh['tab.source'])
   await click(find(zh['tab.settings'], '.dt-status-head button'))
   const feishu = all('.dt-card')[0]!
-  await type(field<HTMLInputElement>('机器人的 lark-cli'), 'lark-broken')
+  await type(field<HTMLInputElement>('应用编号（APP_ID）'), 'cli_broken')
   await act(async () => { feishu.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })) }); await settle()
-  expect(feishu.querySelector('.dt-savebar [role="alert"]')?.textContent).toBe('机器人的 lark-cli 不可用。\nlark-cli: app secret missing')
+  expect(feishu.querySelector('.dt-savebar [role="alert"]')?.textContent).toBe('请检查应用编号、密钥以及机器人启用和发布状态。\n应用凭证验证失败')
 })
 
 it('shows a setup problem on its Source card within one read of the settings, which the settings groups share', async () => {

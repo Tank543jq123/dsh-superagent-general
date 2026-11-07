@@ -287,7 +287,7 @@ function legacyText(value: string): string {
 function normalize(config: unknown): PromptConfig {
   const legacy = LegacyPromptConfigSchema.safeParse(config)
   const limit = legacy.success ? /fewer than (\d+) lines \(additions plus deletions\)/.exec(legacy.data.guides.work ?? '')?.[1] : undefined
-  const current = legacy.success ? { ...teamDefaults, delivery: limit ? teamDefaults.delivery.replace(autoMergeThreshold(200), autoMergeThreshold(Number(limit))) : teamDefaults.delivery,
+  const current = legacy.success ? { ...teamDefaults, delivery: limit ? `${teamDefaults.delivery}\nLegacy GitHub delivery: ${autoMergeThreshold(Number(limit))}` : teamDefaults.delivery,
     skills: Object.fromEntries(Object.entries(legacy.data.guides).filter(([name]) => !LEGACY_FIXED.has(name)).map(([name, body]) => [name, legacyText(body)])) }
     : PromptConfigSchema.parse(config)
   return { communication: currentNames(current.communication), scope: currentNames(current.scope), delivery: currentNames(current.delivery),

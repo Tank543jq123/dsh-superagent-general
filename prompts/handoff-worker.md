@@ -4,4 +4,4 @@ Omitting human_action preserves the pending request; human_action:null or a read
 Repeating the same question reuses its request; a different question replaces it with a new request.
 Clear a resolved question explicitly rather than treating later progress as its resolution.
 Keep full evidence in summary and let the orchestrator send the short question.
-Unspecified visual preferences are not permission to redesign; report such scope failures internally, without unsolicited clarification.
+主动任务若超出规则或缺少必要目标、授权，内部报告范围问题，不向闲聊参与者额外追问。

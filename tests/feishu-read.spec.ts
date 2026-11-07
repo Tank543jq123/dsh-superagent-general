@@ -38,7 +38,7 @@ it('rejects unrelated paths, missing sources, cross-chat results, and incomplete
   await expect(readFeishu(commands, event, 'feishu/source/root/cursor', 20)).rejects.toThrow('Use feishu')
   expect(lark).not.toHaveBeenCalled()
   lark.mockResolvedValueOnce({ items: [] })
-  await expect(readFeishu(commands, event, 'feishu/source/message', 20)).rejects.toThrow('unavailable')
+  await expect(readFeishu(commands, event, 'feishu/source/message', 20)).rejects.toThrow('飞书未返回原消息')
   lark.mockResolvedValueOnce({ items: [{ ...source, chat_id: 'oc_elsewhere' }] })
   await expect(readFeishu(commands, event, 'feishu/source/root', 20)).rejects.toThrow('chat does not match')
   lark.mockResolvedValueOnce({ items: [source] }).mockResolvedValueOnce({ thread_id: 'omt_thread', has_more: true, messages: [] })

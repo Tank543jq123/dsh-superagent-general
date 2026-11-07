@@ -30,7 +30,7 @@ describe('account-isolated operations', () => {
     } finally { delete process.env.GH_TOKEN }
   })
   it('refuses Feishu commands when the deployment has no Feishu bot', async () => {
-    await expect(new Commands(() => testDeployment({ feishu: undefined }), {}, new AbortController().signal).lark(['im', '+chat-list'])).rejects.toThrow('The Feishu Source has no working bot CLI')
+    await expect(new Commands(() => testDeployment({ feishu: undefined }), {}, new AbortController().signal).lark(['im', '+chat-list'])).rejects.toThrow('请先在设置中连接飞书应用。')
   })
   it('reconciles an uncertain GitHub send with its stable marker', async () => {
     const commands = new Commands(() => deployment, {}, new AbortController().signal)

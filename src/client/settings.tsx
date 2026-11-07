@@ -1,4 +1,5 @@
 /** Settings tab shell routing between stage settings (Sources, Eval, Execution), Prompts, and Deployment. */
+import { InfoTip } from './controls.tsx'
 import type { StateView } from './api.ts'
 import { DeploymentPage, type DeploymentForm } from './deployment.tsx'
 import { EvalSettings } from './eval.tsx'
@@ -31,7 +32,7 @@ export function SettingsPage({ group, query, state, deploymentForm }: {
           true)}>{t(`settingsGroup.${value}`)}</button>)}
     </nav>
     <div className="dt-settings-body">
-      <h2 className="dt-settings-title">{t(`settingsGroup.${group}`)}</h2>
+      <h2 className="dt-settings-title">{t(`settingsGroup.${group}`)}<InfoTip text="先在来源中连接飞书应用并选择接收范围，再选择可交办任务的人。默认使用 DSH 模型与任务目录。场景要求可在更多设置中添加团队技能。" /></h2>
       {content}
     </div>
   </div>

@@ -32,7 +32,7 @@
           - id: persona
             name: '@deepseek-ai/dsh-persona'
             config:
-              prefix: You are a coding agent powered by the {{model}} model.
+              prefix: 你是基于 {{model}} 的通用任务智能体，使用可用工具完成获授权的工作。
           - id: agent-instructions
             name: '@deepseek-ai/dsh-agent-instructions'
             config:

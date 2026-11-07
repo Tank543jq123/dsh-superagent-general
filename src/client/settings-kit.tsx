@@ -182,10 +182,10 @@ function RowsField({ field, value, saved, onChange, labels, refreshLabels }: {
   const set = (index: number, row: Row) => onChange(rows.map((item, position) => position === index ? row : item))
   const key = field.columns[0]!
   const savedKeys = new Set((Array.isArray(saved) ? saved as Row[] : []).map(row => row[key.key]))
-  const choose = key.type === 'text' && key.choose && Object.keys(labels).length ? localized(t, key.choose) : ''
+  const choose = key.type === 'text' && key.choose && Object.keys(labels).some(option => !key.pattern || new RegExp(`^(?:${key.pattern})$`).test(option)) ? localized(t, key.choose) : ''
   // Exclude options already selected in another row.
-  const choices = (id: string) => Object.entries(labels).filter(([option]) => option === id
-    || !rows.some(other => other[key.key] === option)).sort(byName)
+  const choices = (id: string) => Object.entries(labels).filter(([option]) => (!('pattern' in key) || !key.pattern || new RegExp(`^(?:${key.pattern})$`).test(option)) && (option === id
+    || !rows.some(other => other[key.key] === option))).sort(byName)
   const blank = Object.fromEntries(field.columns.map(column => [column.key, column.type === 'select' ? column.options[0]!.value : '']))
   // Summarize a row by its second column only when that column is free text (e.g., a display name), not a select option.
   const named = field.columns[1]?.type === 'text' ? field.columns[1] : undefined
@@ -261,7 +261,7 @@ export function SourceField({ field, value, saved, fact, onChange, labels, refre
           {value && !labels[String(value)] ? <option value={String(value)}>{String(value)}</option> : null}
           {Object.entries(labels).sort(byName).map(([option, name]) => <option key={option} value={option}>{name}</option>)}
         </select>
-        : <Input value={String(value ?? '')} readOnly={field.readonly} pattern={field.pattern} spellCheck={false}
+        : <Input type={field.secret ? 'password' : 'text'} value={String(value ?? '')} readOnly={field.readonly} pattern={field.pattern} spellCheck={false}
           onChange={event => onChange(event.target.value)} />}
     </Field>
     case 'fact': return <div className="dt-field">

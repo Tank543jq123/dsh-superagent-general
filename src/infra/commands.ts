@@ -1,4 +1,5 @@
 /** Subprocess wrapper for running gh, lark-cli, and git commands under the deployment's configured accounts. */
+import { FeishuApi } from '../sources/feishu-sdk.ts'
 import { execFile } from 'node:child_process'
 import { basename } from 'node:path'
 import { promisify } from 'node:util'
@@ -102,7 +103,8 @@ export class Commands {
    */
   async lark<T>(args: string[], cwd?: string): Promise<T> {
     const bot = this.deployment.feishu
-    if (!bot) throw new Error('The Feishu Source has no working bot CLI')
+    if (!bot) throw new Error('请先在设置中连接飞书应用。')
+    if (bot.appSecret) return new FeishuApi(bot.appId, bot.appSecret).compat<T>(args, cwd, this.signal)
     const output = await this.run(bot.cli, [...args, '--as', 'bot', '--format', 'json'], cwd)
       .catch((error: unknown) => { throw membership(error) })
     const result = JSON.parse(output) as { ok: boolean; data: T; error?: { code?: number; message?: string } }

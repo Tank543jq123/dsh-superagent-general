@@ -23,6 +23,16 @@ export interface ExecutorToolsHost {
 export function executorTools(host: ExecutorToolsHost, ticket: Ticket): Tool[] {
   const ticketId = ticket.id
   return [
+    tool({
+      name: 'orchestrator_feishu_api',
+      description: '通过已配置的飞书应用操作消息、云文档、知识库、表格等资源。权限由应用授权与任务范围约束；返回真实接口数据。请求正文和分页参数须符合飞书开放平台 API。',
+      schema: z.object({ method: z.enum(['GET', 'POST', 'PATCH', 'PUT', 'DELETE']), path: z.string().regex(/^\/open-apis\/(im|docx|wiki|drive|sheets|bitable|calendar|task)\//), body: z.record(z.string(), z.unknown()).optional(), params: z.record(z.string(), z.unknown()).optional() }).strict(),
+      execute: async (args, signal) => {
+        const current = host.store.tickets.get(ticketId)
+        if (!current || !liveTicket(current)) throw new Error('当前任务已结束，不能执行新的外部操作。')
+        return host.resources.commands.withSignal(signal).lark(['api', args.method, args.path, ...(args.body ? ['--body', JSON.stringify(args.body)] : []), ...(args.params ? ['--params', JSON.stringify(args.params)] : [])])
+      },
+    }),
     readTool('Read one page of a resource of this ticket that the resource parameter lists. Follow next_offset, and next_resource where a page names one.',
       true, (resource, offset, limit, signal) => readResource(host.resources, resource, offset, limit, ticketId, signal)),
     tool({

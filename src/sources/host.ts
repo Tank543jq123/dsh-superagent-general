@@ -11,7 +11,7 @@ import { fill } from '../infra/text.ts'
 export const HEALTH_TEXT = {
   setupPending: 'Waiting for the deployment check',
   sourceOff: 'Off',
-  feishuCliUnset: 'The Source is on, and its bot lark-cli is not set',
+  feishuCliUnset: 'Enter the Feishu app ID and secret in Settings',
   feishuBotMissing: 'Waiting for the Feishu bot',
   pollFailures: '{count} consecutive failed polls; last: {error}',
 } as const

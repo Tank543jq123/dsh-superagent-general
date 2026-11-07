@@ -19,6 +19,8 @@ const MembersSchema = z.looseObject({
   has_more: z.boolean(), truncations: z.array(z.unknown()).optional(),
 })
 const FeishuConfigSchema = FeishuBotSchema.extend({
+  positiveKeywords: z.string().max(4000).default(''),
+  negativeKeywords: z.string().max(4000).default(''),
   readPageSize: z.number().int().min(1).max(50).default(20),
   linkTimeoutMs: z.number().int().min(1).max(90000).default(5000),
   chats: z.array(z.object({ chatId: z.string().regex(/^oc_[a-zA-Z0-9]+$/), name: z.string().trim().max(60).optional(), listen: z.enum(['mentions', 'all']) }).strict())
@@ -35,8 +37,10 @@ export const feishuKind: SourceKind<FeishuConfig> = {
   description: { zh: '接收下列群和私聊中发给机器人的消息，补收群历史并轮询订阅的线程。', en: 'Receives messages to the bot in these chats and direct messages, recovers chat history and polls subscribed Threads.' },
   schema: FeishuConfigSchema,
   fields: [
-    { key: 'cli', type: 'text', label: { zh: '机器人的 lark-cli', en: 'Bot lark-cli' },
-      hint: { zh: '命令名或绝对路径，指向只允许机器人身份（strict mode bot）的 lark-cli 配置；执行器以 lark-cli 调用它。保存时读取应用和机器人，然后重启 dsh-superagent。', en: 'A command name or absolute path of a lark-cli configuration that allows only the bot identity (strict mode bot); the Executor calls it as lark-cli. Saving reads the app and the bot, then restarts dsh-superagent.' } },
+    { key: 'appId', type: 'text', label: { zh: '应用编号（APP_ID）', en: 'App ID' }, hint: { zh: '从飞书开放平台的“凭证与基础信息”复制。开启机器人、长连接接收消息并发布应用后，即可收发消息。', en: 'Copy the App ID from your self-built app. Enable the bot, long-connection events and publish it.' } },
+    { key: 'appSecret', type: 'text', secret: true, label: { zh: '应用密钥（APP_SECRET）', en: 'App secret' }, hint: { zh: '首次连接时填写；已保存时留空保留。密钥单独保存，不会进入模型上下文。', en: 'Leave blank to retain the saved secret.' } },
+    { key: 'positiveKeywords', type: 'text', label: { zh: '关注关键词', en: 'Positive keywords' }, hint: { zh: '用逗号分隔，留空表示不限。候选消息至少包含一个关注词。', en: 'Comma-separated; blank allows all candidates.' } },
+    { key: 'negativeKeywords', type: 'text', label: { zh: '忽略关键词', en: 'Negative keywords' }, hint: { zh: '用逗号分隔。命中任一词就忽略，优先于关注词。已订阅线程继续沿用任务上下文规则。', en: 'Comma-separated; a negative match excludes a new candidate.' } },
     { key: 'chats', type: 'rows', label: { zh: '接收的群', en: 'Chats' },
       hint: { zh: '“仅 @”只接收 @ 机器人的消息和已有工单的线程；“全部消息”也接收其余消息，评估可以按规则从中推断工作，需要机器人有读取全部消息的权限。', en: '"@ only" receives messages that mention the bot and Threads that have Tickets; "All" also receives the rest, from which Eval may infer work under the rules; the bot needs permission to read all messages.' },
       columns: [
@@ -78,7 +82,7 @@ export const feishuKind: SourceKind<FeishuConfig> = {
     }).strict(),
     fields: [
       { key: 'allowed', type: 'rows', label: { zh: '能发起工作的飞书用户', en: 'Feishu users who may originate work' },
-        columns: [{ key: 'id', type: 'text', label: { zh: 'open_id', en: 'open_id' }, pattern: 'ou_[a-zA-Z0-9]+' }, { key: 'name', type: 'text', label: { zh: '名字', en: 'Name' }, optional: true }] },
+        columns: [{ key: 'id', type: 'text', label: { zh: '人员', en: 'Person' }, pattern: 'ou_[a-zA-Z0-9]+', choose: { zh: '选择发来过消息的人', en: 'Choose a message sender' } }, { key: 'name', type: 'text', label: { zh: '名字', en: 'Name' }, optional: true }] },
       { key: 'syncChat', type: 'text', pattern: '(oc_[a-zA-Z0-9]+)?', label: { zh: '同步来源群', en: 'Sync chat' }, choose: { zh: '不同步', en: 'Do not sync' },
         hint: { zh: '同步时，名单变成这个群里的人：新成员加入，离开的人移除，名字取群里的名字。启动时和点同步时进行。', en: 'Syncing makes the list the people in this chat: new members join, people who left are removed, and names follow the chat. It runs at startup and on Sync.' } },
       { key: 'bots', type: 'rows', label: { zh: '消息可以成为候选的机器人', en: 'Bots whose messages may become candidates' },
@@ -122,7 +126,7 @@ export const feishuKind: SourceKind<FeishuConfig> = {
     ],
     values: ({ deployment, trigger }) => ({ DSH_SUPERAGENT_FEISHU_BOT: deployment.feishu ? deployment.feishu.name || deployment.feishu.botId : '', DSH_SUPERAGENT_FEISHU_CHAT: trigger?.source === SOURCE ? String(trigger.meta.chatId ?? '') : '' }),
   },
-  facts: (deployment): Record<string, Localized | string> => deployment?.feishu ? { cli: { zh: `当前机器人 ${deployment.feishu.name || deployment.feishu.botId}`, en: `Current bot ${deployment.feishu.name || deployment.feishu.botId}` } } : {},
+  facts: (deployment): Record<string, Localized | string> => deployment?.feishu ? { appId: { zh: `当前机器人 ${deployment.feishu.name || deployment.feishu.botId}`, en: `Current bot ${deployment.feishu.name || deployment.feishu.botId}` }, cli: { zh: `当前机器人 ${deployment.feishu.name || deployment.feishu.botId}`, en: `Current bot ${deployment.feishu.name || deployment.feishu.botId}` } } : {},
 }
 /** Returns the Feishu Source's settings, falling back to schema defaults while the Feishu plugin is disabled. */
 export const feishuSettings = (sources: SourceRegistry): FeishuConfig => sources.instance<FeishuConfig>(SOURCE)?.config ?? FeishuConfigSchema.parse({})

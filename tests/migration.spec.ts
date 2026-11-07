@@ -278,7 +278,7 @@ it('writes the removed auto-merge threshold and member identities into the promp
   const prompts = new Prompts(store, () => 100000, () => undefined, () => true)
   const migrated = prompts.current()
   expect(migrated).toMatchObject({ revision: 1, previousRevision: 0, source: 'settings-migration' })
-  expect(migrated.config.delivery).toContain('it changes fewer than 350 lines (additions plus deletions);')
+  expect(migrated.config.delivery).toContain('changes fewer than 350 lines (additions plus deletions)')
   expect(migrated.config.skills.identities).toContain('- Alice (Feishu ou_alice) is @alice on GitHub')
   expect(migrated.config.skills.identities).not.toContain('Bob')
   expect(store.get('settings-before-9')).toBeUndefined()

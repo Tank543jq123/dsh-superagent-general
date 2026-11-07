@@ -1,5 +1,27 @@
 node_modules/
 lib/
-.artifacts/
-.env
 coverage/
+.DS_Store
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-*
+.superagent/
+/deepseek-harness/
+/dsh-superagent-prototype/
+/Super-agent-introduce/
+dist/
+*.tgz
+
+# Local reference notes and original project documentation
+/docs/00*.md
+/docs/PLAN.md
+/docs/SOURCES.md
+/SETUP.md
+# Local runtime configuration, backups and control artifacts
+feishu-credentials.json
+settings.json
+settings.json.*
+worker-bin/
+.artifacts/

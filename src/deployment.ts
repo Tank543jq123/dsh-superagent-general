@@ -1,6 +1,8 @@
 /** Plugin configuration and startup verification for repository access and agent CLI identities. */
 import { LIMITS } from './limits.ts'
-import { accessSync, constants, statSync } from 'node:fs'
+import { accessSync, constants, statSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { FeishuApi, storedCredentials } from './sources/feishu-sdk.ts'
 import { delimiter, isAbsolute, join } from 'node:path'
 import type { Volatile } from '@deepseek-ai/cordis'
 import s from '@deepseek-ai/schemastery'
@@ -13,7 +15,7 @@ const reason = (error: unknown): string => error instanceof Error ? error.messag
 const absolute = (description: string) => s.string().pattern(/^\//).description(`${description} Absolute path.`)
 /** Plugin configuration of the dsh-superagent entry. Volatile fields apply without a restart because dsh-superagent reads them on each use; changing `stateDir` remounts the plugin. */
 export const Config = s.object({
-  stateDir: absolute('Directory for the database, locks, worker shims, the agent\'s git configuration and, by default, the ticket directories.').required(),
+  stateDir: s.string().pattern(/^(\/|$)/).default(join(homedir(), '.dsh', 'superagent-general')).description('保存运行记录与任务文件的位置，留空使用默认目录。'),
   promptMaxChars: s.number().min(LIMITS.promptMaxChars.min).max(LIMITS.promptMaxChars.max).step(1).default(100000)
     .description('Largest saved prompt configuration, in characters.').volatile(),
   admissionContextMaxPages: s.number().min(LIMITS.admissionContextMaxPages.min).max(LIMITS.admissionContextMaxPages.max).step(1).default(10)
@@ -43,9 +45,9 @@ const MOVED: Record<string, string> = {
 /** Read machine settings and reject unknown configuration keys (naming where deprecated keys moved). */
 export function machineOf(config: DeploymentConfig): Machine {
   const unknown = Object.keys(config).filter(key => !(key in (Config.dict ?? {})))
-  if (unknown.length) throw new Error(`dsh-superagent configuration has keys it does not use: ${unknown.map(key => MOVED[key] ? `${key} (now ${MOVED[key]})` : key).join(', ')}; docs/006-deployment.md lists the keys`)
+  if (unknown.length) throw new Error(`dsh-superagent configuration has keys it does not use: ${unknown.map(key => MOVED[key] ? `${key} (now ${MOVED[key]})` : key).join(', ')}; docs/USER-GUIDE.md lists the keys`)
   const { stateDir, promptMaxChars, admissionContextMaxPages, admissionContextTimeoutMs, permissionPreset } = config
-  return { stateDir, promptMaxChars, admissionContextMaxPages, admissionContextTimeoutMs,
+  return { stateDir: stateDir || join(homedir(), '.dsh', 'superagent-general'), promptMaxChars, admissionContextMaxPages, admissionContextTimeoutMs,
     permissionPreset: permissionPreset ?? 'workspace-write' }
 }
 
@@ -53,7 +55,7 @@ export const GithubAccountsSchema = z.object({
   repository: z.string().trim().regex(/^([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)?$/, 'owner/name').default(''),
   cli: z.string().trim().default(''),
 })
-export const FeishuBotSchema = z.object({ cli: z.string().trim().default('') })
+export const FeishuBotSchema = z.object({ cli: z.string().trim().default(''), appId: z.string().trim().default(''), appSecret: z.string().default(''), credentialVersion: z.string().default('') })
 /** Source configuration keys that affect deployment setup and trigger a restart when changed. */
 export const SETUP_FIELDS: Readonly<Record<string, readonly string[]>> = { github: Object.keys(GithubAccountsSchema.shape), feishu: Object.keys(FeishuBotSchema.shape) }
 
@@ -62,7 +64,7 @@ export interface Deployment extends Machine {
   github: { cli: string; login: string; noreply: string }
   feishu?: FeishuBot
 }
-export interface FeishuBot { cli: string; appId: string; brand: 'feishu' | 'lark'; botId: string; name: string }
+export interface FeishuBot { appSecret?: string; cli: string; appId: string; brand: 'feishu' | 'lark'; botId: string; name: string }
 
 /** Resolve a command name or absolute path to an executable file, ignoring the worker shim directory. */
 export function executable(name: string, path: string, exclude?: string): string {
@@ -95,7 +97,7 @@ export async function resolveDeployment(machine: Machine, github: unknown, probe
   const { stateDir } = machine
   const accounts = GithubAccountsSchema.parse(github ?? {})
   const remote = accounts.repository
-  if (!remote) throw new SetupError('repositoryUnset')
+  if (!remote) return { ...machine, repository: '', github: { cli: '', login: '', noreply: '' } }
   if (!accounts.cli) throw new SetupError('agentCliUnset')
   let cli: string
   try { cli = executable(accounts.cli, path, workerBin(stateDir)) } catch (error) { throw new SetupError('agentCliMissing', { output: reason(error) }) }
@@ -119,7 +121,16 @@ const BotInfo = z.object({ bot: z.object({ open_id: z.string().regex(/^ou_[A-Za-
  * Workers invoke this CLI as `lark-cli`, so a CLI that also permits a user identity would let workers act as that user.
  */
 export async function resolveFeishuBot(machine: Machine, feishu: unknown, probe: Probe, path = process.env.PATH ?? ''): Promise<FeishuBot | undefined> {
-  const { cli: name } = FeishuBotSchema.parse(feishu ?? {})
+  const input = FeishuBotSchema.parse(feishu ?? {})
+  const stored = storedCredentials(machine.stateDir)
+  if (input.appId) {
+    const secret = input.appSecret || (stored?.appId === input.appId ? stored.appSecret : '')
+    if (!secret) throw new SetupError('feishuSecretMissing')
+    const api = new FeishuApi(input.appId, secret)
+    const bot = await api.identity().catch(() => { throw new SetupError('feishuCredentialsInvalid') })
+    return { cli: '', appId: input.appId, appSecret: secret, brand: 'feishu', botId: bot.open_id, name: bot.app_name ?? '' }
+  }
+  const { cli: name } = input
   if (!name) return undefined
   const fail = (error: unknown): never => { throw error instanceof SetupError ? error : new SetupError('feishuCliFailed', { output: reason(error) }) }
   let cli = ''

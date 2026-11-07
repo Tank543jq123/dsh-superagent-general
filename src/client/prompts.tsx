@@ -157,6 +157,7 @@ function BuiltInEditor({ config, view, part, onEdit }: {
       <span className="dt-actions"><Button variant="outline" size="sm" icon={<Icon name="refresh" />} disabled={!config.overrides?.[part.key]}
         onClick={reset}>{t('promptResetSection')}</Button></span></div>
     <Hint>{t(readBy)}</Hint>
+    {!part.key.startsWith('skill/') && <Hint>{t('promptBuiltInHint')}</Hint>}
     {part.placeholders && <Hint>{t('promptTemplateHint', { placeholders: part.placeholders.join(t('listSeparator')) })}</Hint>}
     {updated(config, part) && <section className="dt-default-updated" aria-label={t('promptDefaultUpdated')}>
       <b>{t('promptDefaultUpdated')}</b>

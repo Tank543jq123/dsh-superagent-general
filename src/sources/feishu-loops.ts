@@ -1,4 +1,6 @@
 /** Feishu background loops: live event stream consumer, chat/topic history backfill, chat name refresh, and subscribed thread polling. */
+import * as Lark from '@larksuiteoapi/node-sdk'
+import { messageText } from './feishu-sdk.ts'
 import { spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
 import { setTimeout as delay } from 'node:timers/promises'
@@ -68,11 +70,37 @@ async function watch(ctx: SourceContext, signal: AbortSignal): Promise<void> {
 export const consumerRetry = (previous: number | undefined, ranMs: number): number =>
   previous === undefined || ranMs >= 60_000 ? 1000 : Math.min(previous * 2, 60_000)
 async function consume(ctx: SourceContext, signal: AbortSignal): Promise<void> {
+  const identity = bot(ctx)
+  if (identity.appSecret) {
+    const client = new Lark.WSClient({ appId: identity.appId, appSecret: identity.appSecret, loggerLevel: Lark.LoggerLevel.error })
+    let chain = Promise.resolve()
+    await client.start({ eventDispatcher: new Lark.EventDispatcher({}).register({ 'im.message.receive_v1': async (raw: { sender?: { sender_id?: { open_id?: string }; sender_type?: string }; message?: { message_id: string; chat_id: string; chat_type: string; content: string; create_time: string; root_id?: string; parent_id?: string; thread_id?: string; mentions?: { id?: { open_id?: string }; key?: string; name?: string }[] } }) => {
+      chain = chain.then(async () => {
+        const m = raw.message
+        if (!m || signal.aborted || !enabled(ctx)) return
+        const trigger = feishuTrigger({ ...m, content: messageText(m.content), sender_id: raw.sender?.sender_id?.open_id ?? '', sender_type: raw.sender?.sender_type === 'user' ? 'user' : 'bot', mentions: (m.mentions ?? []).map(v => ({ ...v, id: v.id?.open_id ?? '' })) }, identity.botId, identity.appId)
+        if (!trigger) return
+        const chats = ctx.state.get(KV.feishu.chats) ?? {}; chats[m.chat_id] = m.chat_type === 'p2p'; ctx.state.set(KV.feishu.chats, chats)
+        const labels = ctx.state.get(KV.sources.labels(SOURCE)) ?? {}; labels[trigger.actor.id] = `发来“${trigger.text.slice(0, 20)}”的人`; ctx.state.set(KV.sources.labels(SOURCE), labels)
+        await receive(ctx, trigger)
+      }).catch(() => { ctx.report('feishu', { state: 'error', detail: '飞书消息处理失败，请查看消息记录。' }) })
+      await chain
+    } }) })
+    let fail: ((error: Error) => void) | undefined
+    const health = setInterval(() => { const state = client.getConnectionStatus().state; ctx.report('feishu', { state: state === 'connected' ? 'ready' : state === 'failed' ? 'error' : 'starting', detail: state === 'connected' ? '消息连接正常' : '正在建立或恢复消息连接', at: new Date().toISOString() }); if (state === 'failed') fail?.(new Error('飞书连接暂未就绪，将按现有恢复策略重试。')) }, 3000)
+    try { await new Promise<void>((resolve, reject) => { fail = reject; if (signal.aborted) resolve(); else signal.addEventListener('abort', () => resolve(), { once: true }) }) }
+    finally { clearInterval(health); client.close({ force: true }); await chain }
+    return
+  }
+
   const child = spawn(bot(ctx).cli, ['event', 'consume', 'im.message.receive_v1', '--as', 'bot'],
     { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, LARKSUITE_CLI_NO_UPDATE_NOTIFIER: '1',
       LARKSUITE_CLI_NO_SKILLS_NOTIFIER: '1' } })
   const stdout = createInterface({ input: child.stdout }); const stderr = createInterface({ input: child.stderr })
   let chain = Promise.resolve(); let diagnostic = ''; let ready = false
+  // A malformed event line or a consumer warning is a real failure; a startup ready line that arrives
+  // afterwards must not overwrite it, or the health entry would flip back to ready on a slow pipe.
+  let failed = false
   const stop = (): void => { child.stdin.end(); child.kill('SIGTERM') }
   signal.addEventListener('abort', stop, { once: true })
   const timeout = setTimeout(() => { diagnostic = 'Feishu event consumer did not become ready within 45 seconds'; stop() }, 45_000)
@@ -80,8 +108,8 @@ async function consume(ctx: SourceContext, signal: AbortSignal): Promise<void> {
     diagnostic = line.slice(0, 4000)
     if (line.startsWith('[event] ready')) {
       ready = true; clearTimeout(timeout)
-      ctx.report('feishu', { state: 'ready', detail: 'Listening for bot events', at: new Date().toISOString() })
-    } else if (/WARN|drop|error/.test(line)) ctx.report('feishu', { state: 'error', detail: diagnostic })
+      if (!failed) ctx.report('feishu', { state: 'ready', detail: 'Listening for bot events', at: new Date().toISOString() })
+    } else if (/WARN|drop|error/.test(line)) { failed = true; ctx.report('feishu', { state: 'error', detail: diagnostic }) }
   })
   stdout.on('line', (line: string) => {
     chain = chain.then(async () => {
@@ -93,7 +121,7 @@ async function consume(ctx: SourceContext, signal: AbortSignal): Promise<void> {
       chats[String(trigger.meta.chatId)] = trigger.meta.direct === true
       ctx.state.set(KV.feishu.chats, chats)
       await receive(ctx, trigger)
-    }).catch(error => { ctx.report('feishu', { state: 'error', detail: String(error) }) })
+    }).catch(error => { failed = true; ctx.report('feishu', { state: 'error', detail: String(error) }) })
   })
   try {
     await new Promise<void>((resolve, reject) => {
@@ -110,7 +138,7 @@ export async function refreshChatNames(ctx: SourceContext, signal?: AbortSignal)
   const result = z.looseObject({ chats: z.array(z.looseObject({ chat_id: z.string(), name: z.string().nullish() })).optional() })
     .parse(await commands.lark(['im', '+chat-list', '--page-all', '--page-size', '100']))
   const names = Object.fromEntries((result.chats ?? []).filter(chat => chat.name).map(chat => [chat.chat_id, chat.name!]))
-  ctx.state.set(KV.sources.labels(SOURCE), names)
+  ctx.state.set(KV.sources.labels(SOURCE), { ...ctx.state.get(KV.sources.labels(SOURCE)), ...names })
   return names
 }
 /** Rereads the chat list every minute independently of history backfill (whose rounds can take much longer), so newly joined chats appear within a minute. */

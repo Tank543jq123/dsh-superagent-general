@@ -1,3 +1,4 @@
+import { bundledSkills } from '../src/app/skill-files.ts'
 import { Context } from '@deepseek-ai/cordis'
 import { bindScopeParent } from '@deepseek-ai/dsh-scope'
 import { mkdtempSync, rmSync } from 'node:fs'
@@ -858,7 +859,7 @@ it('reports each setup problem where the operator fixes it, and checks the agent
   // git older than 2.32 ignores GIT_CONFIG_GLOBAL and reads the operator's configuration.
   answers = { ...valid, [HELPERS]: 'file:/home/me/.gitconfig\0!gh auth git-credential\0' }
   await needs('deployment', 'gitTooOld', {})
-  await needs('github', 'repositoryUnset', {}, { github: { repository: '' } })
+  answers = { ...valid }; const generic = await restart({}, { github: { repository: '' } }); await generic.ready; expect(generic.configured()).toBe(true); expect(generic.deployment.repository).toBe('')
   // A broken Feishu bot leaves Feishu out and says why; GitHub work goes on.
   answers = { ...valid, [`${BOT()} config strict-mode`]: 'strict-mode: off (source: profile)' }
   const next = await restart()
@@ -1064,15 +1065,14 @@ it('passes team text with template braces to every Session literally, without re
   }
 })
 
-it('leaves auto-merge to the delivery requirements, with the agent\'s own gh and the line threshold', async () => {
+it('leaves GitHub merge requirements to task authorization without a hardcoded line threshold', async () => {
   const { ticket } = await acceptedTicket()
   expect(runtime.ticketEnvironment(ticket).map(variable => variable.key)).not.toContain('DSH_SUPERAGENT_GITHUB_MERGE_ACCOUNT')
   expect(ticket.mandate).not.toHaveProperty('autoMergeLineLimit')
-  const delivery = runtime.prompts.current().config.delivery
-  expect(delivery).toContain('it changes fewer than 200 lines (additions plus deletions);')
-  // Auto-merge is never enabled as the agent account; only a merge CLI the section names enables it.
-  expect(delivery).toContain('Never enable auto-merge as the agent account')
-  expect(delivery).toContain('<merge CLI> pr merge <number> --auto --merge --match-head-commit <sha>')
+  const delivery = bundledSkills.github.content
+  expect(delivery).toContain('不自动合并 PR、关闭 Issue 或改写已有提交历史')
+  expect(delivery).toContain('当前任务的明确授权和允许的工具权限')
+  expect(delivery).not.toContain('200 lines')
   expect(runtime.prompts.preview(runtime.prompts.current().config).worker).not.toContain('gh-merge')
 })
 
@@ -1131,13 +1131,12 @@ it('runs a GitHub-only deployment: the GitHub part of the Policy decides alone, 
 })
 
 
-it('credits each human reviewer once in the default delivery requirements on every commit of the PR, never with an empty commit', async () => {
-  const delivery = runtime.prompts.current().config.delivery
-  expect(delivery).toContain('Co-authored-by: <name or login> <id+login@users.noreply.github.com>')
-  expect(delivery).toContain('on every commit of the PR branch')
-  expect(delivery).toContain('git filter-branch -f --msg-filter')
-  expect(delivery).toContain('Never push an empty commit to credit a reviewer.')
-  expect(delivery).toContain('Do not credit bots')
+it('keeps repository-specific authorship policy configurable and does not instruct automatic history rewrites', () => {
+  const delivery = bundledSkills.github.content
+  expect(delivery).toContain('提交身份')
+  expect(delivery).toContain('任务要求或仓库 AGENTS.md')
+  expect(delivery).not.toContain('git filter-branch')
+  expect(delivery).not.toContain('git push --force-with-lease')
 })
 
 it('shows a failed reply as a problem with its attempts, an error of the reply effects after three, until it is withdrawn', async () => {
@@ -1526,7 +1525,7 @@ it('refuses the main Session a bash command that runs sleep and a long job wait,
   const { sessionId } = await acceptedTicket()
   expect(guards.get(sessionId)!(bash('sleep 60'))).toBeUndefined()
   // The main Session's role says so.
-  expect(masterPrompt).toContain('Worker reports, follow_up notices, new candidates and a background job\'s end, with its output, arrive by themselves as messages')
+  expect(masterPrompt).toContain('Worker 报告、follow_up、新候选以及后台作业结束都会主动送达')
 })
 
 it('reads the main Session\'s preset from a registry with or without presetForSession, and takes standard\'s caps when it cannot', async () => {

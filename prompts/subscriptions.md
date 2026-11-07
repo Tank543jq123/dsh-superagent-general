@@ -1,3 +1,5 @@
+默认使用中文。订阅适用于所有已接入的来源；下文 PR、合并与 CI 细节仅适用于 GitHub 工单。
+
 Subscriptions are relations between tickets and threads.
 Accepting a ticket subscribes every thread of its triggering triggers; binding a ticket PR subscribes the PR thread.
 Every later message on a subscribed thread, from any participant or bot, reaches the subscribed tickets as context; it carries no authority and needs no mention or allowed-sender check.

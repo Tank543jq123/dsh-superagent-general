@@ -147,6 +147,8 @@ function Pages({ route, openTab, deploymentForm }: { route: Route; openTab: (tab
   const page = (() => {
     switch (route.page) {
       case 'overview': return <OverviewPage />
+      case 'about': return <div className="dt-form"><h2 className="dt-section-title">关于 SuperAgent</h2><p className="dt-hint">基于 DeepSeek Harness 官方 SuperAgent 原型适配的通用智能体。常驻 Router 统一承接交互，隔离 Worker Session 并发处理任务，线程订阅使后续消息持续进入对应任务。</p><p className="dt-hint">消息、判断、任务与订阅记录自动更新。任务详情可打开 DSH 执行会话，查看真实的推理、工具调用和交付过程。</p><p className="dt-hint">默认支持通用任务。翻译、项目拆解、知识库维护等可在“设置 → 更多设置”的团队技能中按需要配置，Worker 根据任务选择使用。</p><p className="dt-hint">上游：DeepSeek Harness Team · dsh-superagent-prototype · MIT License。</p></div>
+
       case 'source': return <SourceStatus />
       case 'trigger': return route.id !== undefined ? <ThreadPage key={route.id} id={route.id} target={route.query?.trigger} />
         : <TriggerStatus filter={route.query?.filter ?? 'subscribed'} />
