@@ -1,6 +1,6 @@
 /** Plugin configuration and startup verification for repository access and agent CLI identities. */
 import { LIMITS } from './limits.ts'
-import { accessSync, constants, statSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
+import { accessSync, constants, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { FeishuApi, storedCredentials } from './sources/feishu-sdk.ts'
 import { delimiter, isAbsolute, join } from 'node:path'
