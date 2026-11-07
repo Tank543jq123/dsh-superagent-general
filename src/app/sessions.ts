@@ -30,6 +30,8 @@ export interface SessionsHost {
   /** The `models` health entry, which reports managed sessions waiting on a model-budget retry. */
   readonly health: HealthEntry
   readonly masterId: string
+  /** Sandbox preset every Session is created with; read on each creation so a changed machine setting applies to new Sessions. */
+  permissionPreset(): string
   readonly lifetime: AbortSignal
   closing(): boolean
   /** Execution environment variables for `ticket`, rendered into its worker's system prompt. */
@@ -149,7 +151,8 @@ export class Sessions {
     const settings = this.host.store.settings()
     await initializeRoleModel(ctx, result.agent, role === 'orchestrator' ? settings.eval.model : settings.executor.model)
     await this.decorate(result.agent)
-    ctx.permissionPresets.set(result.agent.session, 'danger-full-access')
+    // The sandbox preset comes from the deployment, not a fixed value: `danger-full-access` only when the operator chose it.
+    ctx.permissionPresets.set(result.agent.session, this.host.permissionPreset())
     await ctx.sessionController.rename({ sessionId: id as SessionId, title })
     return result.agent
   }

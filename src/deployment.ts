@@ -20,6 +20,10 @@ export const Config = s.object({
     .description('Pages of thread context one assessment may read.').volatile(),
   admissionContextTimeoutMs: s.number().min(LIMITS.admissionContextTimeoutMs.min).max(LIMITS.admissionContextTimeoutMs.max).step(1)
     .default(15000).description('Time limit of one context read during an assessment, in milliseconds.').volatile(),
+  permissionPreset: s.union([
+    s.const('read-only'), s.const('workspace-write'), s.const('danger-full-access'),
+  ]).default('workspace-write')
+    .description('Sandbox mode of every Session this plugin creates: read-only, workspace-write, or danger-full-access. A name DeepSeek Harness does not define as a preset stops startup.').volatile(),
 })
 export type DeploymentConfig = ReturnType<typeof Config>
 export interface Machine {
@@ -27,6 +31,8 @@ export interface Machine {
   promptMaxChars: Volatile<number>
   admissionContextMaxPages: Volatile<number>
   admissionContextTimeoutMs: Volatile<number>
+  /** Sandbox preset every Session is created with; `danger-full-access` disables confinement. */
+  permissionPreset: Volatile<'read-only' | 'workspace-write' | 'danger-full-access'>
 }
 const MOVED: Record<string, string> = {
   repository: 'on the GitHub Source', branchPrefix: 'in the prepare command of the Execution settings', github: 'on the GitHub Source',
@@ -38,8 +44,9 @@ const MOVED: Record<string, string> = {
 export function machineOf(config: DeploymentConfig): Machine {
   const unknown = Object.keys(config).filter(key => !(key in (Config.dict ?? {})))
   if (unknown.length) throw new Error(`dsh-superagent configuration has keys it does not use: ${unknown.map(key => MOVED[key] ? `${key} (now ${MOVED[key]})` : key).join(', ')}; docs/006-deployment.md lists the keys`)
-  const { stateDir, promptMaxChars, admissionContextMaxPages, admissionContextTimeoutMs } = config
-  return { stateDir, promptMaxChars, admissionContextMaxPages, admissionContextTimeoutMs }
+  const { stateDir, promptMaxChars, admissionContextMaxPages, admissionContextTimeoutMs, permissionPreset } = config
+  return { stateDir, promptMaxChars, admissionContextMaxPages, admissionContextTimeoutMs,
+    permissionPreset: permissionPreset ?? 'workspace-write' }
 }
 
 export const GithubAccountsSchema = z.object({
