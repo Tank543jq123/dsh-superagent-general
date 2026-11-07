@@ -110,9 +110,9 @@ This repository is neither a rewrite nor a wholesale replacement of General. It 
 | Date | Repository / commit | What happened |
 |---|---|---|
 | 2026-10-31 | [`deepseek-ai/dsh-superagent-prototype` @ 8c32a9d](https://github.com/deepseek-ai/dsh-superagent-prototype/tree/8c32a9dc5d72c033816c6a8110b37f40cf94fba4) | Official prototype baseline: Engine, Router/Worker, authorization, subscriptions, Effects/Outbox, native panel |
-| 2026-11-04/05 | [`comeonzhj/SuperAgent-General` @ aedd8ff](https://github.com/comeonzhj/SuperAgent-General) | Sibling fork of the same baseline: general Chinese product layer, Feishu SDK, panel/locales, keywords, full tests |
-| 2026-11-05→07 | Original `dsh-superagent` local version / `d97463a` | In parallel, added the Weixin Source, `permissionPreset` sandbox, Weixin sign-in script, tests and docs; frozen on 7 November |
-| 2026-11-07 | commits `fa31795` → `509329e`, tag `general-v0.2.2-port` | Theme-by-theme three-way port from `8c32a9d`; keep Weixin and sandbox, adopt the General product layer |
+| 2026-11-04/05 | [`comeonzhj/SuperAgent-General` @ aedd8ff](https://github.com/comeonzhj/SuperAgent-General/commit/aedd8ff) | Sibling fork of the same baseline: general Chinese product layer, Feishu SDK, panel/locales, keywords, full tests |
+| 2026-11-05→07 | [Original `dsh-superagent` local version](https://github.com/Tank543jq123/dsh-superagent-general/commit/d97463a) / [`d97463a`](https://github.com/Tank543jq123/dsh-superagent-general/commit/d97463a) | In parallel, added the Weixin Source, `permissionPreset` sandbox, Weixin sign-in script, tests and docs; frozen on 7 November |
+| 2026-11-07 | commits [`fa31795`](https://github.com/Tank543jq123/dsh-superagent-general/commit/fa31795) → [`509329e`](https://github.com/Tank543jq123/dsh-superagent-general/commit/509329e), tag [`general-v0.2.2-port`](https://github.com/Tank543jq123/dsh-superagent-general/tree/general-v0.2.2-port) | Theme-by-theme three-way port from `8c32a9d`; keep Weixin and sandbox, adopt the General product layer |
 | now | [`Tank543jq123/dsh-superagent-general`](https://github.com/Tank543jq123/dsh-superagent-general) | Public upgraded release (main + tag + rollback branch) |
 
 Why not `git merge`: the two repositories have no common history (General's first commit is an independent root commit). A merge needs `--allow-unrelated-histories`, makes the whole tree a conflict surface, and can overwrite the local Weixin and sandbox work. The actual method was `git diff 8c32a9d <general-commit> -- <paths>`, reviewed and applied per theme. The full record is in [`docs/009-general-upgrade.md`](docs/009-general-upgrade.md).
@@ -191,8 +191,8 @@ pnpm install && pnpm check && pnpm build
 # restart the DSH profile
 ```
 
-- Upgrade commit: `509329e`; tag: `general-v0.2.2-port`.
-- Rollback branch: `pre-general-main` (`8c32a9d`).
+- Upgrade commit: [`509329e`](https://github.com/Tank543jq123/dsh-superagent-general/commit/509329e); tag: [`general-v0.2.2-port`](https://github.com/Tank543jq123/dsh-superagent-general/tree/general-v0.2.2-port).
+- Rollback branch: [`pre-general-main`](https://github.com/Tank543jq123/dsh-superagent-general/tree/pre-general-main) (`8c32a9d`).
 - Remote: `Tank543jq123/dsh-superagent-general`; replace the remote if you need a team repository.
 - Keep the old `lib/` or package before rebuilding and restarting.
 

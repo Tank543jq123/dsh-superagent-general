@@ -110,9 +110,9 @@ node scripts/weixin-login.mjs --state-dir /absolute/path/to/superagent-data
 | 时间 | 仓库 / 提交 | 发生了什么 |
 |---|---|---|
 | 2026-10-31 | [`deepseek-ai/dsh-superagent-prototype` @ 8c32a9d](https://github.com/deepseek-ai/dsh-superagent-prototype/tree/8c32a9dc5d72c033816c6a8110b37f40cf94fba4) | 官方原型基线：Engine、Router/Worker、授权、订阅、Effects/Outbox、原生面板 |
-| 2026-11-04/05 | [`comeonzhj/SuperAgent-General` @ aedd8ff](https://github.com/comeonzhj/SuperAgent-General) | 同一基线的兄弟 fork：通用中文产品层、飞书 SDK、面板/语言、关键词、完整测试 |
-| 2026-11-05→07 | 原 `dsh-superagent` 本地版本 / `d97463a` | 并行加入微信 Source、`permissionPreset` 沙箱、微信登录脚本、测试与文档；11 月 7 日冻结 |
-| 2026-11-07 | 提交 `fa31795` → `509329e`，tag `general-v0.2.2-port` | 以 `8c32a9d` 为共同基线做主题级三方移植；保留微信与沙箱，采用 General 产品层 |
+| 2026-11-04/05 | [`comeonzhj/SuperAgent-General` @ aedd8ff](https://github.com/comeonzhj/SuperAgent-General/commit/aedd8ff) | 同一基线的兄弟 fork：通用中文产品层、飞书 SDK、面板/语言、关键词、完整测试 |
+| 2026-11-05→07 | [原 `dsh-superagent` 本地版本](https://github.com/Tank543jq123/dsh-superagent-general/commit/d97463a) / [`d97463a`](https://github.com/Tank543jq123/dsh-superagent-general/commit/d97463a) | 并行加入微信 Source、`permissionPreset` 沙箱、微信登录脚本、测试与文档；11 月 7 日冻结 |
+| 2026-11-07 | 提交 [`fa31795`](https://github.com/Tank543jq123/dsh-superagent-general/commit/fa31795) → [`509329e`](https://github.com/Tank543jq123/dsh-superagent-general/commit/509329e)，tag [`general-v0.2.2-port`](https://github.com/Tank543jq123/dsh-superagent-general/tree/general-v0.2.2-port) | 以 `8c32a9d` 为共同基线做主题级三方移植；保留微信与沙箱，采用 General 产品层 |
 | 现在 | [`Tank543jq123/dsh-superagent-general`](https://github.com/Tank543jq123/dsh-superagent-general) | 公开的升级发布版（main + tag + 回滚分支） |
 
 为什么不用 `git merge`：两个仓库没有共同提交历史（General 的首个提交是独立根提交），`merge` 需要 `--allow-unrelated-histories`，冲突面等于整棵树，容易把本地的微信和沙箱改动覆盖掉。实际做法是用 `git diff 8c32a9d <general-commit> -- <paths>` 生成主题补丁，逐项合并、逐项测试。完整记录见 [`docs/009-general-upgrade.md`](docs/009-general-upgrade.md)。
@@ -191,8 +191,8 @@ pnpm install && pnpm check && pnpm build
 # 重启 DSH profile
 ```
 
-- 升级提交：`509329e`；tag：`general-v0.2.2-port`。
-- 回滚分支：`pre-general-main`（8c32a9d）。
+- 升级提交：[`509329e`](https://github.com/Tank543jq123/dsh-superagent-general/commit/509329e)；tag：[`general-v0.2.2-port`](https://github.com/Tank543jq123/dsh-superagent-general/tree/general-v0.2.2-port)。
+- 回滚分支：[`pre-general-main`](https://github.com/Tank543jq123/dsh-superagent-general/tree/pre-general-main)（8c32a9d）。
 - 远端：`Tank543jq123/dsh-superagent-general`；如需团队远端，请替换 remote 后推送。
 - 回滚前保留旧的 `lib/` 或安装包，避免同时重建和重启。
 
