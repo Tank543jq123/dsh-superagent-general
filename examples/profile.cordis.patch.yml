@@ -3,3 +3,7 @@
 - id: dsh-superagent
   config:
     stateDir: /absolute/path/to/superagent-data
+
+# 启用飞书应用：先在“来源 → 飞书”填写 APP_ID/APP_SECRET 并保存，然后在 profile 覆盖：
+# - id: dsh-superagent-feishu
+#   disabled: false

@@ -28,10 +28,21 @@
     "LICENSE",
     "prompts",
     "skills",
-    "docs/USER-GUIDE.md",
-    "docs/UPSTREAM.md",
+    "SETUP.md",
+    "docs/000-philosophy.md",
+    "docs/001-domain.md",
+    "docs/002-authorization.md",
+    "docs/003-execution.md",
+    "docs/004-prompts.md",
+    "docs/005-panel.md",
+    "docs/006-deployment.md",
+    "docs/007-architecture.md",
+    "docs/008-cookbook.md",
     "docs/ARCHITECTURE.md",
-    "docs/PROMPTS.md"
+    "docs/PROMPTS.md",
+    "docs/UPSTREAM.md",
+    "docs/USER-GUIDE.md",
+    "docs/009-general-upgrade.md"
   ],
   "dsh": {
     "bundle": {

@@ -12,7 +12,7 @@
 - Session、Executor、Store、Effects、Outbox、Passes、MasterAssessor 及面板主体沿用原型实现。
 - 适配集中在可选 GitHub、通用默认要求、飞书 SDK 接入、凭证存储、关键词与设置体验。公共角色、主动评估与执行提示按通用任务解释，来源技能保留平台衔接协议，团队专用流程交由用户配置；Worker 的额外主动授权提示同步以接单范围约束。
 - 翻译、分析、知识库维护等场景通过团队技能提供给 Worker，所有任务统一进入原型派工与会话链路。
-- 保留独立进程守护，并将 SDK 的终止连接失败交回原型的退避恢复循环。
+- 进程守护由部署环境负责，本分支不包含 watchdog；SDK 的终止连接失败交回原型的退避恢复循环。
 
 相对原型的用户可见变化见 [README](../README.md)，当前代码职责见 [ARCHITECTURE.md](ARCHITECTURE.md)。
 

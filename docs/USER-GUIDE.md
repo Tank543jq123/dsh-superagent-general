@@ -2,11 +2,11 @@
 
 ## 安装与打开
 
-运行 `pnpm install`、`pnpm check` 后，通过 `pnpm pack --pack-destination dist` 生成安装包，在 DSH 插件页安装并启用 `dsh-superagent-general`。插件沿用官方原型的 DSH 0.2.1-alpha.2 接口基线，兼容范围见 package.json。
+运行 `pnpm install`、`pnpm check` 后，通过 `pnpm pack --pack-destination dist` 生成安装包，在 DSH 插件页安装并启用 `dsh-superagent`。插件沿用官方原型的 DSH 0.2.1-alpha.2 接口基线，兼容范围见 package.json。
 
 侧边栏入口为 **SuperAgent**。默认是概览，导航依次为概览、来源、触发、评估、执行、关于、设置。面板使用原型的 React 控件、DSH 主题变量和自动轮询。线程页展示消息时间线及订阅，任务页展示派工、报告、输入与执行状态。主会话及任务的执行会话均可在 DSH 中打开。
 
-安装与启用是两个步骤。请关闭参考原型组合包 `dsh-superagent`，启用本项目组合包。若安装后仍报 `dsh-superagent/lib/index.js` 等入口缺失，检查组合包选择。新版本内部插件条目沿用原型命名，加载模块来自 `dsh-superagent-general`。
+安装与启用是两个步骤。启用本项目的组合包 `dsh-superagent`。若安装后仍报 `dsh-superagent/lib/index.js` 等入口缺失，检查组合包选择。内部插件条目沿用原型命名，加载模块来自本包 `dsh-superagent`。
 
 ## 设置
 
@@ -46,12 +46,12 @@ Worker 使用 `orchestrator_feishu_api` 操作已授权的飞书资源，沿用�
 
 ## 从 0.1 版本升级
 
-默认数据目录保持 `~/.dsh/superagent-general`。首次启动会迁移原 `settings.json` 中的应用凭证、人员、群、关键词和模型设置；原知识收录要求转换为可选的团队技能。
+默认数据目录为 `~/.dsh/superagent-general`。旧版 `settings.json` 的导入函数保留在 `src/app/legacy-import.ts`，但本分支的 Runtime 未调用它；升级前请备份，并按设置页手工迁移人员、群、关键词、模型和团队技能。
 
 旧版 `superagent.sqlite` 与设置文件保留，原型引擎使用独立的 `orchestrator.sqlite`。旧版知识流水线没有创建 DSH Session，旧任务不会生成虚构会话。新版开始的工作统一通过原型 Worker 执行。旧运行记录和旧任务状态库暂未转换到原型领域模型。
 
 ## 守护与验证边界
 
-保留独立进程守护入口：`pnpm watchdog -- [--heartbeat /完整数据目录/heartbeat] dsh web`。宿主写入心跳，守护进程按异常退出和心跳超时重启，采用有限退避。任务、订阅、Effect、Outbox 和模型额度恢复使用官方原型的机制。
+进程守护由部署环境负责；本分支不包含 watchdog 入口。任务、订阅、Effect、Outbox 和模型额度恢复使用官方原型的机制。
 
 飞书真实权限与资源写入仍需要使用自己的应用完成联调。配置目录含凭证，备份时需妥善保管。原型的执行工具运行在宿主授权的环境中，使用前应配置相应的工作范围。

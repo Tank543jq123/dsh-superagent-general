@@ -16,7 +16,7 @@ The bundle defines `dsh-superagent-worker` for Executors and `dsh-superagent-rou
 
 Opening a blank managed Session in the Web UI can select the profile's default preset. dsh-superagent restores its role-specific preset before the first turn.
 
-Both presets run with `danger-full-access` as the operator's OS user and read messages from subscribed Threads. Account wrappers choose the agent's credentials by default; they do not isolate the process. A worker can execute programs by path and read the operator's home directory. For isolation, use a dedicated OS account containing only the agent's credentials.
+Both presets run under the configured `permissionPreset` (default `workspace-write`; `danger-full-access` disables confinement) as the operator's OS user and read messages from subscribed Threads. Account wrappers choose the agent's credentials by default; they do not isolate the process. A worker can execute programs by path and read the operator's home directory. For isolation, use a dedicated OS account containing only the agent's credentials.
 
 ## Prerequisites
 
