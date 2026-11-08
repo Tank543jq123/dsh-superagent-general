@@ -16,6 +16,9 @@
 
 ### 验证
 - `pnpm check`：62 个测试文件 / 1198 项通过；类型检查、ESM/client 构建通过。
+- 注意：在**宿主会话内**直接跑会有 2 项失败（`tests/runtime.spec.ts` 的"环境恢复"用例），
+  原因是宿主给 worker 注入了 `GIT_CONFIG_GLOBAL` 与 `worker-bin` PATH，用例断言"恢复后为空"。
+  用干净环境跑（`env -u GIT_CONFIG_GLOBAL` + 系统 PATH）该项 91/91 通过 —— 是环境问题，不是回归。
 - 新会话（subagent）实测：workspace 外写入成功；profile `danger-full-access`；`prompts/work.md` 的「## 派工」与 worker 的 subagent 行存在。
 
 
