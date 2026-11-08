@@ -1,5 +1,24 @@
 # 变更记录
 
+## 2026-11-08 · 0.2.3
+
+### 新增 · 子 Agent 派工
+- Worker 提示词与工作说明新增「派工」规则：任务含两个及以上互不依赖的子任务，或预计十余步以上且能切成独立小块时，用一条消息同时派多个 subagent，自己继续做余下部分。
+- 明确边界：决策、最终交付判断和串行依赖留在 Worker；子 Agent 的结果是输入，依赖它的结论要复核；几小步能做完的事直接做，不为了派而派。
+- `docs/004-prompts.md` 补充 Subagent dispatch 说明；`tests/docs.spec.ts` 增加派工规则断言。
+
+### 修复
+- 修正 `src/app/sessions.ts` 的陈旧注释：Session 创建时设置的是配置的 `permissionPreset`，不是固定 `danger-full-access`。
+
+### 部署说明（本机，非仓库默认）
+- 本机 `superagent` profile 的 `permissionPreset` 已从 `workspace-write` 改为 `danger-full-access`，host 重启后新会话生效；插件默认值仍是 `workspace-write`，仓库不改变这个默认。
+- 这是“可信本机 + 单人”的取舍；隔离靠专用 OS 账户。子 Agent 的 approvalPolicy 仍由 DSH 固定为 `never`，需要审批的操作会被拒绝而不是转给父级；子 Agent 应停下报告父级。
+
+### 验证
+- `pnpm check`：62 个测试文件 / 1198 项通过；类型检查、ESM/client 构建通过。
+- 新会话（subagent）实测：workspace 外写入成功；profile `danger-full-access`；`prompts/work.md` 的「## 派工」与 worker 的 subagent 行存在。
+
+
 ## 2026-11-07
 
 - 新增：迁移 SuperAgent-General 产品层，包括通用提示词、飞书应用 SDK 传输、面板与语言、关键词过滤和对应测试。
