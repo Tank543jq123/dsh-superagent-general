@@ -41,6 +41,10 @@ An override records which built-in text it was based on. Upgrades preserve the t
 
 The main Session can read affected part names in `orchestrator_read prompts`, under `default_changed`.
 
+### Subagent dispatch
+
+The worker instructions dispatch subagents when an Assignment has two or more independent workstreams, or roughly ten or more steps that split into independent pieces. Decisions, final delivery judgement and serial dependencies stay with the Worker. A subagent's result is input, not a conclusion: the Worker verifies any result it relies on. A few small steps are done directly, since dispatching is itself a cost.
+
 ## Assembly and precedence
 
 The system prompt is assembled in this order:

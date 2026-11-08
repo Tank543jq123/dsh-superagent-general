@@ -33,6 +33,13 @@ describe('public documentation and distribution', () => {
     const invalid = Object.entries({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies }).filter(([, version]) => /^(?:file:|link:|workspace:|\/|\.\.?\/)/.test(version))
     expect(invalid).toEqual([])
   })
+  it('tells workers when to dispatch subagents', () => {
+    const work = read('prompts/work.md')
+    expect(work).toContain('## 派工')
+    expect(work).toContain('subagent')
+    expect(work).toContain('两个及以上互不依赖的子任务')
+    expect(read('prompts/worker.md')).toContain('subagent')
+  })
   it('resolves source-relative imports entirely within the checked-out project', () => {
     const missing = [...sourceFiles('src'), ...sourceFiles('tests')].flatMap(file => {
       const source = readFileSync(file, 'utf8')
