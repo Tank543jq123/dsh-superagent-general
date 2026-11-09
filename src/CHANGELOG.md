@@ -1,5 +1,25 @@
 # 变更记录
 
+## 2026-11-09 · 0.2.7
+
+### 改进 · 垫片生成按平台分叉（Windows 分支未验证）
+
+> ⚠️ **Windows 支持标注为「未验证方案，不对结果负责」。**
+> 本仓库的开发与全部验证都在 Linux 上完成。下面 Windows 相关代码是按各平台文档写出的
+> "应该能工作"的方案，**没有在真实 Windows 上运行过一次**。欢迎实测反馈，但不承诺可用。
+
+- `writeEnvironment` 原来无条件写 `#!/bin/sh` 垫片 + `mode: 0o755`。Windows 没有 shebang，
+  `.cmd` 是另一种形状 —— 现在按平台分叉：POSIX 仍是 `#!/bin/sh`，Windows 写 `.cmd`
+  （`@echo off` / `REM` 标记 / `exit /b %ERRORLEVEL%`）。
+- Windows 不再传 `mode: 0o755`：NTFS 不看 POSIX 权限位，传一个假的权限值只会误导。
+- Windows 的 PATH 剥离改用 `for %%E in (...)` 逐项比较，与 POSIX 版语义一致。
+- 已知未覆盖：PATHEXT 让调用方可能绕过 `名称.cmd` 直接命中同目录的 `名称.exe`；
+  cmd 对 `%` 的加倍转义在路径含 `%` 时仍未实测。
+
+### 说明
+- 拦截层（`blockedCommands`）仍然需要垫片 —— 那是"禁止"，无法用环境变量表达。
+  账号绑定已在 0.2.6 改为 `GH_CONFIG_DIR`，不再依赖垫片。
+
 ## 2026-11-09 · 0.2.6
 
 ### 新增 · 平台抽象层（Windows 支持的第一步）

@@ -7,6 +7,7 @@ import { lstat, mkdir, readdir, readFile, rename, unlink, writeFile } from 'node
 import { realpathSync } from 'node:fs'
 import { delimiter, join, resolve } from 'node:path'
 import type { SubprocessOutputReader, SubprocessRuntime } from '@deepseek-ai/dsh-subprocess'
+import { isWindows } from './platform.ts'
 import type { Deployment } from '../deployment.ts'
 import { SetupError } from '../setup.ts'
 import { CliError } from './commands.ts'
@@ -92,19 +93,45 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
   for (const name of before) { const file = join(dir, name); if (!await written(file)) throw new SetupError('foreignFile', { file }) }
   // Workers may be running concurrently: write each shim to a temp file and atomically rename it so no command ever resolves past the shim directory.
   const kept = new Set<string>()
+  // 【2026-11-09】垫片按平台分叉 —— Windows 没有 shebang，`.cmd` 是另一种形状。
+  //
+  // ⚠️ **Windows 分支未测试**：本仓库的开发与验证都在 Linux 上，下面 `cmd` 垫片只是
+  // 按 cmd.exe 的语法写出的一个"应该能工作"的方案，没有在真实 Windows 上跑过一次。
+  // 已知它覆盖不到的情况：PATHEXT 让 `cmd` 的调用方可能绕过 `名称.cmd` 直接命中
+  // `名称.exe`（如果同目录里恰好有），以及 cmd 对 `%` 的加倍转义在路径含 `%` 时
+  // 仍需实测。本版把 Windows 支持标注为「未验证方案」。
+  const win = isWindows()
   const shim = async (name: string, body: string): Promise<void> => {
-    const temporary = join(dir, `.${name}.${process.pid}.tmp`)
-    await writeFile(temporary, `#!/bin/sh\n${MARKER}\n${body}\n`, { mode: 0o755 })
-    await rename(temporary, join(dir, name))
-    kept.add(name)
+    const file = win ? `${name}.cmd` : name
+    const temporary = join(dir, `.${file}.${process.pid}.tmp`)
+    // Windows 上 `mode` 无意义（NTFS 不看 POSIX 权限位），写空对象而不是 0o755 以免误导。
+    const text = win ? `@echo off\r\nREM ${MARKER}\r\n${body}\r\nexit /b %ERRORLEVEL%\r\n` : `#!/bin/sh\n${MARKER}\n${body}\n`
+    await writeFile(temporary, text, win ? {} : { mode: 0o755 })
+    await rename(temporary, join(dir, file))
+    kept.add(file)
   }
+  // POSIX: strip the shim directory from PATH, then exec the real program, so a wrapper
+  // script that resolves `gh` by name reaches the binary rather than this shim again.
   const withoutShims = [
     `self=${shellQuote(dir)}`, 'rest=', 'IFS=:', 'set -f',
     'for entry in $PATH; do [ "$entry" = "$self" ] || rest="${rest:+$rest:}$entry"; done',
     'set +f', 'unset IFS', 'PATH=$rest', 'export PATH',
   ].join('\n')
-  const run = (program: string): string => `${withoutShims}\nexec ${shellQuote(program)} "$@"`
-  const fail = (message: string): string => `echo ${shellQuote(message)} >&2\nexit 1`
+  const run = (program: string): string => win
+    // Windows: drop shim entries from PATH the same way, then hand every argument through.
+    ? [
+      'setlocal EnableExtensions DisableDelayedExpansion',
+      'set "SELF=%~dp0"',
+      'set "SELF=%SELF:~0,-1%"',
+      'set "REST="',
+      'for %%E in ("%PATH:;=" "%") do (if /I not "%%~E"=="%SELF%" call set "REST=%%REST%%;%%~E")',
+      'set "PATH=%REST:~1%"',
+      `"${program}" %*`,
+    ].join('\r\n')
+    : `${withoutShims}\nexec ${shellQuote(program)} "$@"`
+  const fail = (message: string): string => win
+    ? `echo ${message.replace(/[%^&|<>"]/g, (char) => `^${char}`)} 1>&2\r\nexit /b 1`
+    : `echo ${shellQuote(message)} >&2\nexit 1`
   await shim('gh', run(github.cli))
   await shim('lark-cli', feishu ? (feishu.cli ? run(feishu.cli) : fail('飞书应用已接入，请使用 orchestrator_feishu_api。')) : fail('lark-cli is unavailable: this installation has no Feishu bot.'))
   for (const name of new Set(blockedCommands.filter(name => !WORKER_COMMANDS.includes(name)))) {

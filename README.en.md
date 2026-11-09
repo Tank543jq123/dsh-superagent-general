@@ -1,5 +1,7 @@
 # dsh-superagent-general
 
+> **Platform support**: verified on Linux and macOS. **Windows is an unverified proposal** — the code branches by platform (see `src/infra/platform.ts`), but its tests have never run on real Windows and availability is not promised.
+
 [简体中文](README.md) | **English**
 
 > A general-purpose DSH SuperAgent for a team: it receives authorized requests from **GitHub, Feishu and Weixin**, decides under a Policy whether to take them, executes each Ticket in its own DSH Worker Session, and delivers the result back to the source conversation.

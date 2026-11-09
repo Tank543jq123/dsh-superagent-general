@@ -1,5 +1,7 @@
 # dsh-superagent-general
 
+> **平台支持**：Linux / macOS 已实测。**Windows 是未验证方案** —— 代码里已做出平台分叉（见 `src/infra/platform.ts`），但没有在真实 Windows 上跑过测试，不承诺可用。
+
 **简体中文** | [English](README.en.md)
 
 > 面向团队的通用 DSH SuperAgent：从 **GitHub、飞书、微信** 接收受权请求，按 Policy 判断是否接单，在独立的 DSH Worker Session 中执行，并把结果送回原对话。
