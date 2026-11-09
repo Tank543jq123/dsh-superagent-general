@@ -17,6 +17,13 @@ export interface SetupHost {
 const setupFields = (settings: Settings) =>
   JSON.stringify(Object.entries(SETUP_FIELDS).map(([id, keys]) => keys.map(key => settings.sources[id]?.config[key] ?? '')))
 export const setupChanged = (before: Settings, after: Settings): boolean => setupFields(before) !== setupFields(after)
+/** Deployment used when no GitHub Source is configured: channel-only operation, no repository or agent account. */
+const channelOnlyDeployment = (machine: Machine): Deployment => ({ ...machine, repository: '', github: { cli: '', login: '', noreply: '' } })
+/** Whether the GitHub Source is configured well enough to resolve a repository and agent account. */
+const githubConfigured = (settings: Settings): boolean => {
+  const source = settings.sources.github
+  return source?.enabled !== false && typeof source?.config?.repository === 'string' && source.config.repository.trim() !== ''
+}
 
 /**
  * Resolves the target repository, GitHub account, and optional Feishu bot by probing CLIs, then writes and applies the isolated git and shim environment used by worker processes.
@@ -61,6 +68,7 @@ export class Setup {
   /** Verify account CLIs for a modified source block before saving, ignoring setup errors belonging to other blocks. */
   async checkAccounts(block: SettingsBlock, settings: Settings): Promise<void> {
     const { machine } = this.host
+    if (block === 'source:github' && !githubConfigured(settings)) return
     const check = block === 'source:feishu' ? resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe())
       : resolveDeployment(machine, settings.sources.github?.config, this.probe())
     await check.catch((error: unknown) => { if (!(error instanceof SetupError) || error.place === block.slice(7)) throw error })
@@ -78,7 +86,9 @@ export class Setup {
   private async resolve(settings: Settings): Promise<Deployment> {
     const { context, machine, lifetime } = this.host
     const probe = this.probe()
-    const deployment = await resolveDeployment(machine, settings.sources.github?.config, probe)
+    const deployment = githubConfigured(settings)
+      ? await resolveDeployment(machine, settings.sources.github?.config, probe)
+      : channelOnlyDeployment(machine)
     const feishu = await resolveFeishuBot(machine, settings.sources.feishu?.config, probe).catch((error: unknown) => {
       if (!(error instanceof SetupError)) throw error
       this.feishuProblem = error.problem

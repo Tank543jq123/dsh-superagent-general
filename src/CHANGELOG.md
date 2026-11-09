@@ -1,5 +1,18 @@
 # 变更记录
 
+## 2026-11-09 · 0.2.5
+
+### 变更 · GitHub 变为可选（通道模式，第一阶段）
+- Setup 不再强制要求 GitHub 仓库/账号：GitHub Source 关闭或没有仓库时，使用空 deployment 启动，微信/飞书等已配置来源可以独立建工单。
+- 无 GitHub 时不写 agent git 环境、不注入 `DSH_SUPERAGENT_GITHUB_*`；不要求 PR/commit，结果走来源会话与工单目录。
+- 现有已配置 GitHub 的部署行为不变。
+- 本阶段只做“无 GitHub 也能开用”；HTTP/CLI 两个新信道在下一阶段加入。
+
+### 验证
+- `pnpm check`：62 个测试文件 / 1200 项通过；类型检查、ESM/client 构建通过。
+- 代码路径：src/app/setup.ts 的 githubConfigured / channelOnlyDeployment；GitHub 配置为空时不再调用 resolveDeployment。
+
+
 ## 2026-11-09 · 0.2.4
 
 ### 修复 · 派工落地
