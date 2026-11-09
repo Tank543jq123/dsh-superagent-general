@@ -1,5 +1,24 @@
 # 变更记录
 
+## 2026-11-09 · 0.2.6
+
+### 新增 · 平台抽象层（Windows 支持的第一步）
+- `src/infra/platform.ts`：整个仓库**唯一**回答"这是哪个操作系统"的模块。回答三个问题——命令行怎么跑（`shellArgv`）、可执行搜索路径怎么拼（`pathVariable` / `pathDelimiter`）、路径怎么引号（`quoteForShell`）。
+- 为什么集中：测下来 1198 个测试里 131 挂、跨 9 个文件，几乎全是 `spawn sh ENOENT` / `spawn sleep ENOENT` —— 89% 逻辑可移植，不可移植的集中在「命令怎么跑、环境怎么拼、服务脚本怎么写」三件事上。散落的 `process.platform` 判断会让每一处都成为可以搞错的地方。
+
+### 修复 · `executor.prepare` 在 Windows 上必然失败
+- `src/executor/dsh.ts` 写死了 `['sh', '-c', command]`，Windows 上没有 `sh` → ENOENT → prepare 永远失败。改用 `shellArgv()`：POSIX 仍是 `sh -c`，Windows 用 `cmd /d /s /c`（`/d` 跳过注册表 AutoRun，`/s` 按 cmd 文档的引号契约取整条）。
+- 不用 PowerShell 做默认：`executor.prepare` 是操作者写的一行命令，文档里例子几乎全是 POSIX shell；`cmd` 是更接近的翻译，换 PowerShell 会悄悄改变 `&&`、`>` 和引号的语义。
+
+### 改进 · 账号绑定不再依赖 PATH 垫片
+- `agentVariables` 增加 `GH_CONFIG_DIR`：让 `gh` 自己的工作目录指向智能体账号的配置。原来这件事靠一个 `#!/bin/sh` 垫片 `exec` 另一个程序——POSIX-only，Windows 上根本没有 shebang，`.cmd` 又是另一种形状。
+- 文档里早就提到 `GH_CONFIG_DIR`（`src/sources/github.ts:47` 的提示文案），但代码从未设置它。现在补上。
+- 拦截层（`blockedCommands`）仍然需要垫片，但那是"禁止"——与"绑到哪个账号"是两件事，拆开后 Windows 不再需要 `.cmd` 垫片来绑账号。
+
+### 已验证 / 未验证
+- 已验证：`src/executor/dsh.ts` 是生产代码里唯一写死 `sh -c` 的地方（其余 `sh`/`sleep` 都在测试里）；上游三个仓库的 README/docs/package.json 里 `windows|win32` 命中数为 0，`package.json` 也没有 `os` 字段——不是明确拒绝 Windows，而是默认按 POSIX 设计、从未测试。
+- **未验证：以上改动都没有在真实 Windows 上跑过。** 本机是 Linux，`shellArgv` / `quoteForShell` 的 Windows 分支只有单元测试覆盖（`tests/platform.spec.ts` 10 项，显式传 `'win32'`）。
+
 ## 2026-11-09 · 0.2.5
 
 ### 新增 · 本地命令信道（`cli`）

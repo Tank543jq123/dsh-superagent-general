@@ -45,6 +45,14 @@ export const GIT_LOCATION: readonly string[] = ['GIT_DIR', 'GIT_WORK_TREE', 'GIT
 export function agentVariables(stateDir: string): Record<string, string | undefined> {
   return {
     GH_TOKEN: undefined, GITHUB_TOKEN: undefined,
+    // 【2026-11-09】账号绑定的跨平台做法：让 `gh` 自己的工作目录指向智能体账号的配置，
+    // 而不是靠一个 `#!/bin/sh` 垫片去 exec 另一个程序。
+    //   · 垫片是 POSIX-only —— Windows 上根本没有 shebang，`.cmd` 又是另一种形状，
+    //     这正是 "131 个测试挂、全是 spawn sh ENOENT" 里最难缠的一半；
+    //   · GH_CONFIG_DIR / LARKSUITE_CLI_CONFIG_DIR 是 CLI 自己认的环境变量，
+    //     两个平台完全一样。
+    // 拦截层（blockedCommands）仍然需要垫片，但那是"禁止"，与"绑到哪个账号"是两件事。
+    GH_CONFIG_DIR: join(stateDir, 'gh-config'),
     // A worker's git finds the repository from its directory, never from the host's environment.
     ...Object.fromEntries(GIT_LOCATION.map(name => [name, undefined])),
     GIT_CONFIG_GLOBAL: workerGitConfig(stateDir), GIT_CONFIG_NOSYSTEM: '1',
