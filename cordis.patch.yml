@@ -18,6 +18,10 @@
     # Drop a .md file into <stateDir>/cli-inbox and it becomes one instruction.
     - id: dsh-superagent-cli
       name: dsh-superagent/cli-watch
+    # HTTP Source: any program posts an instruction with a token; needs no account anywhere.
+    # Its own prefix, because the management API's same-origin fence excludes outside callers.
+    - id: dsh-superagent-http
+      name: dsh-superagent/http-watch
     # The agent preset of every Executor Session (WORKER_PRESET in src/app/sessions.ts); the main Session has its own, below.
     # It is DSH's `standard` preset with only what a worker needs, and a shell whose foreground command moves to a background job
     # after 5 seconds, so a long command does not hold back a person's message, which the Session takes at its next step. Left

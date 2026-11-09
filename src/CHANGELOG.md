@@ -9,6 +9,13 @@
 - 空文件留在原处不消费：更可能是还没写完，而不是有意留白。
 - 与其它 Source 一样通过 Policy 授权；文件本身不带身份，`senderId` 代表投递它的人。
 
+### 新增 · HTTP 接口信道（`http`）
+- 任何程序都能用 HTTP 派活：`POST /dsh-superagent/inbox`，body `{ text, id?, thread?, sender? }`，回复用 `GET /dsh-superagent/outbox?thread=…` 读回。
+- **必须配 token**，`Authorization: Bearer <token>` 或 `x-dsh-superagent-token`；令牌比较走 `timingSafeEqual`（长度不等时也做一次等价比较，不靠长度泄露）。**没配 token 时拒绝一切请求**并在 health 上报 —— 回环端口上的裸收件箱本机任何进程都能打。
+- 走独立前缀而不是挂在 `/orchestrator` 下：管理 API 有 same-origin 浏览器信任栅栏，外部 `curl` 按设计过不去。
+- `id` 是幂等键：同一个 id 不会开出第二个工单。
+- body 上限 64 KiB。
+
 ### 说明
 - 挂载点已加入 bundle（`cordis.patch.yml`）、构建入口（`tsdown.config.ts`）与 `package.json` exports；`tests/bundle-patch.spec.ts` 的行 id 断言同步更新。
 

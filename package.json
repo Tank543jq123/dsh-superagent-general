@@ -19,7 +19,8 @@
     "./weixin-watch": "./lib/weixin-watch.js",
     "./package.json": "./package.json",
     "./locale/*.json": "./locale/*.json",
-    "./cli-watch": "./lib/cli-watch.js"
+    "./cli-watch": "./lib/cli-watch.js",
+    "./http-watch": "./lib/http-watch.js"
   },
   "files": [
     "lib",

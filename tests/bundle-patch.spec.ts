@@ -31,7 +31,7 @@ it('defines the worker preset Executor Sessions run under, with a shell that mov
   // The channel set is part of the contract: a Source that is not mounted cannot
   // deliver anything, so a row added or dropped here has to be a deliberate change.
   expect(rows.map(row => row.id)).toEqual(['dsh-superagent', 'dsh-superagent-github', 'dsh-superagent-feishu', 'dsh-superagent-weixin',
-    'dsh-superagent-cli', 'dsh-superagent-worker-preset', 'dsh-superagent-router-preset'])
+    'dsh-superagent-cli', 'dsh-superagent-http', 'dsh-superagent-worker-preset', 'dsh-superagent-router-preset'])
   const preset = presetOf(rows, WORKER_PRESET)
   expect(preset.id).toBe(WORKER_PRESET)
   const plugins = flat(preset.plugins)
