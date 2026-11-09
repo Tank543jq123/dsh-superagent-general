@@ -33,12 +33,35 @@ describe('public documentation and distribution', () => {
     const invalid = Object.entries({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies }).filter(([, version]) => /^(?:file:|link:|workspace:|\/|\.\.?\/)/.test(version))
     expect(invalid).toEqual([])
   })
+  it('injects a fixed delegation gate after the composed worker prompt', () => {
+    const source = read('src/app/sessions.ts')
+    expect(source).toContain('DELEGATION_GATE')
+    expect(source).toContain('开工前派工检查')
+    expect(source).toContain('派工：无（理由）')
+  })
   it('tells workers when to dispatch subagents', () => {
     const work = read('prompts/work.md')
     expect(work).toContain('## 派工')
     expect(work).toContain('subagent')
     expect(work).toContain('两个及以上互不依赖的子任务')
     expect(read('prompts/worker.md')).toContain('subagent')
+  })
+  it('makes dispatch a gate before work starts, not an optional optimisation', () => {
+    // 【2026-11-09】实测：worker 加了「可切块时优先派」之后仍然不派 —— 软措辞不产生行为变化。
+    // 现在改成开工前的强制判定，并把"默认偏向派"写明；同时也放进 shared（两个角色都读）。
+    const work = read('prompts/work.md')
+    expect(work).toMatch(/动手前先做一次判定|这是流程的第一步/)
+    expect(work).toMatch(/能 → 必须先派|必须先派/)
+    expect(work).toMatch(/默认偏向派工/)
+    // 反例清单必须挡住"我自己更快"这类借口
+    expect(work).toMatch(/我自己写更快/)
+    const shared = read('prompts/shared.md')
+    expect(shared).toContain('Delegation is the default for splittable work')
+    expect(shared).toMatch(/fallback, not the default/)
+    // worker.md 不能再出现"自行选择方法"这类反向暗示
+    const worker = read('prompts/worker.md')
+    expect(worker).not.toContain('自行选择方法')
+    expect(worker).toContain('独立完成是兜底不是默认')
   })
   it('resolves source-relative imports entirely within the checked-out project', () => {
     const missing = [...sourceFiles('src'), ...sourceFiles('tests')].flatMap(file => {

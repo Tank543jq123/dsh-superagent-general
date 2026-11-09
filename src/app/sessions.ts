@@ -60,6 +60,11 @@ declare module '@deepseek-ai/cordis' {
  * changes the profile, schedules work or starts goals outside the worker slots, the pause and a person's hold, starts or
  * messages other Sessions, or edits documents.
  */
+/** Fixed worker-only gate appended after the composed prompt: delegation is a preflight, and the report states it. */
+const DELEGATION_GATE = '\n## 开工前派工检查（强制）\n'
+  + '开始执行前，先把任务切成互不依赖的块。若这样的块有 2 个或更多，必须先用一条消息派对应数量的 subagent，你自己只做决策、依赖、汇总和最终验证；不得先顺序做完再补派。\n'
+  + '单文件/单点小修可以直接做，但报告第一行必须写 `派工：无（理由）`；有派工时写 `派工：N 个（谁做什么）`。\n'
+  + '子 Agent 的 approvalPolicy 固定 never，需要审批的操作不要派给子 Agent，留给自己或报告。'
 const WORK_TOOLS = ['read', 'write', 'edit', 'read_image', 'glob', 'grep', 'bash', 'pwsh', 'job_output', 'job_list', 'job_kill', 'web_search',
   'web_fetch', 'skill', 'todo_write', 'subagent', 'list_subagent_models', 'send_message', 'list_agents', 'interrupt_agent']
 /** What the main Session is told when it would wait: what it waits for comes to it, and a waiting step holds back the next. */
@@ -248,7 +253,7 @@ export class Sessions {
       const version = this.promptFor(agent, context.signal !== undefined)
       const current = ticket && host.store.tickets.get(ticket.id)
       const composed = host.prompts.compose(version.config, master ? 'orchestrator' : 'worker', current ? host.environment(current) : undefined)
-      return `[dsh-superagent prompt revision ${version.revision}]\n${composed}\n${current ? mandateInstructions(current.mandate) : ''}`
+      return `[dsh-superagent prompt revision ${version.revision}]\n${composed}\n${current ? mandateInstructions(current.mandate) : ''}` + (master ? '' : DELEGATION_GATE)
     }, ...(master ? { complete: true } : {}) }))
     // A recreated skill scope (e.g. after the skills service restarts) starts empty, so reset `binding.skills` before rebinding.
     const skillScope = agent.ctx.inject(['skills'], scope => {
