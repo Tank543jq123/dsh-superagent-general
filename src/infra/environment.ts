@@ -60,7 +60,7 @@ export function agentVariables(stateDir: string): Record<string, string | undefi
 /** True when a regular file starts with the dsh-superagent marker in its first two lines; a symbolic link, directory, or other non-regular file never counts as written by dsh-superagent. */
 async function written(file: string): Promise<boolean> {
   if (!(await lstat(file)).isFile()) return false
-  const head = (await readFile(file, 'utf8')).split('\n', 2)
+  const head = (await readFile(file, 'utf8')).split('\n', 2).map(line => line.replace(/\r$/, ''))
   return [MARKER, ...LEGACY_MARKERS].some(marker => head.includes(marker))
 }
 async function own(file: string, text: string, mode = 0o644): Promise<void> {
@@ -84,11 +84,15 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
   for (const name of before) { const file = join(dir, name); if (!await written(file)) throw new SetupError('foreignFile', { file }) }
   // Workers may be running concurrently: write each shim to a temp file and atomically rename it so no command ever resolves past the shim directory.
   const kept = new Set<string>()
-  const shim = async (name: string, body: string): Promise<void> => {
-    const temporary = join(dir, `.${name}.${process.pid}.tmp`)
-    await writeFile(temporary, `#!/bin/sh\n${MARKER}\n${body}\n`, { mode: 0o755 })
-    await rename(temporary, join(dir, name))
-    kept.add(name)
+  // Windows support is best-effort and untested: `.cmd` shims replace the POSIX shell shims, and PATHEXT resolves the real
+  // command. The tested deployment is POSIX; do not treat this branch as a security or compatibility guarantee.
+  const windows = process.platform === 'win32'
+  const shim = async (name: string, posixBody: string, windowsBody: string): Promise<void> => {
+    const file = windows ? `${name}.cmd` : name
+    const temporary = join(dir, `.${file}.${process.pid}.tmp`)
+    await writeFile(temporary, windows ? `@echo off\r\n${MARKER}\r\n${windowsBody}\r\n` : `#!/bin/sh\n${MARKER}\n${posixBody}\n`, { mode: 0o755 })
+    await rename(temporary, join(dir, file))
+    kept.add(file)
   }
   const withoutShims = [
     `self=${shellQuote(dir)}`, 'rest=', 'IFS=:', 'set -f',
@@ -97,10 +101,14 @@ export async function writeEnvironment(deployment: Pick<Deployment, 'stateDir' |
   ].join('\n')
   const run = (program: string): string => `${withoutShims}\nexec ${shellQuote(program)} "$@"`
   const fail = (message: string): string => `echo ${shellQuote(message)} >&2\nexit 1`
-  await shim('gh', run(github.cli))
-  await shim('lark-cli', feishu ? (feishu.cli ? run(feishu.cli) : fail('飞书应用已接入，请使用 orchestrator_feishu_api。')) : fail('lark-cli is unavailable: this installation has no Feishu bot.'))
+  const windowsRun = (program: string): string => `set "PATH=%PATH:${dir};=%"\r\ncall "${program}" %*`
+  const windowsFail = (message: string): string => `echo ${message.replace(/[&|<>^]/g, m => `^${m}`)} 1>&2\r\nexit /b 1`
+  await shim('gh', run(github.cli), windowsRun(github.cli))
+  await shim('lark-cli', feishu ? (feishu.cli ? run(feishu.cli) : fail('飞书应用已接入，请使用 orchestrator_feishu_api。')) : fail('lark-cli is unavailable: this installation has no Feishu bot.'),
+    feishu ? (feishu.cli ? windowsRun(feishu.cli) : windowsFail('飞书应用已接入，请使用 orchestrator_feishu_api。')) : windowsFail('lark-cli is unavailable: this installation has no Feishu bot.'))
   for (const name of new Set(blockedCommands.filter(name => !WORKER_COMMANDS.includes(name)))) {
-    await shim(name, fail(`${name} is blocked in this installation; use gh, which acts as ${github.login}.`))
+    await shim(name, fail(`${name} is blocked in this installation; use gh, which acts as ${github.login}.`),
+      windowsFail(`${name} is blocked in this installation; use gh, which acts as ${github.login}.`))
   }
   for (const name of before) if (!kept.has(name)) await unlink(join(dir, name))
   await own(workerGitConfig(stateDir), [

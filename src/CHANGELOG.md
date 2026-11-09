@@ -1,5 +1,18 @@
 # 变更记录
 
+## 2026-11-09 · 0.2.6
+
+### 新增 · Windows 未验证兼容方案（best-effort）
+- 路径校验接受 POSIX 与 Windows 绝对路径；`executable()` 在 `win32` 下按 PATHEXT 查找 `.exe/.cmd/.bat`。
+- `workerProbe` 不再拼 `env PATH=…`，改为 DSH `subprocess.spawn({env})`，去掉一个 POSIX 依赖。
+- `writeEnvironment` 在 Windows 生成 `.cmd` 垫片（gh/lark-cli/blockedCommands），POSIX 仍用 `#!/bin/sh`；`Commands.run` 在 Windows 经 cmd 解析 `.cmd`。
+- **Windows 方案未在 Windows 上跑过测试，不承诺可用，不对结果负责；POSIX 是已测试平台。** 这只是一版可评审的兼容分支，不是平台抽象完成。
+
+### 验证
+- Linux `pnpm check`：62 个测试文件 / 1200 项通过；类型检查、构建通过。
+- Windows 实测：未执行；用户已知情并接受未验证。
+
+
 ## 2026-11-09 · 0.2.5
 
 ### 变更 · GitHub 变为可选（通道模式，第一阶段）

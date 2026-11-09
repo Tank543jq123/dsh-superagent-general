@@ -4,7 +4,7 @@ import { bindScopeParent } from '@deepseek-ai/dsh-scope'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { DatabaseSync } from 'node:sqlite'
-import { join } from 'node:path'
+import { delimiter, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest'
 import type { UserMessage } from '@deepseek-ai/dsh-llm'
 import { renderPrompt } from '@deepseek-ai/dsh-system-prompt'
@@ -851,10 +851,12 @@ it('reports each setup problem where the operator fixes it, and checks the agent
   await needs('github', 'repositoryReadOnly', { account: 'agent-bot', repository: 'acme/widgets' })
   answers[`${AGENT()} api repos/acme/widgets --jq {name: .full_name, push: .permissions.push}`] = '{"name":"acme/widgets","push":true}\n'
   // The agent CLI runs in the workers' environment: without the shims on PATH.
-  const check = subprocess.spawn.mock.calls.map(([spec]) => spec.argv).find(argv => argv.includes(AGENT()))!
-  expect(check[0]).toBe('env')
-  expect(check[1]!.startsWith('PATH=')).toBe(true)
-  expect(check[1]!.slice('PATH='.length).split(':')).not.toContain(join(directory, 'worker-bin'))
+  const check = subprocess.spawn.mock.calls.map(([spec]) => spec).find(spec => spec.argv.includes(AGENT())) as unknown as
+    { argv: readonly string[]; env?: Record<string, string> }
+  // PATH is passed through spawn({env}) rather than the POSIX `env` helper, so Windows has no `env` dependency.
+  const workerPath = check.env?.PATH ?? ''
+  expect(workerPath).not.toBe('')
+  expect(workerPath.split(delimiter)).not.toContain(join(directory, 'worker-bin'))
   const valid = { ...answers }
   // git older than 2.32 ignores GIT_CONFIG_GLOBAL and reads the operator's configuration.
   answers = { ...valid, [HELPERS]: 'file:/home/me/.gitconfig\0!gh auth git-credential\0' }

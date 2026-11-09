@@ -15,7 +15,7 @@ const reason = (error: unknown): string => error instanceof Error ? error.messag
 const absolute = (description: string) => s.string().pattern(/^\//).description(`${description} Absolute path.`)
 /** Plugin configuration of the dsh-superagent entry. Volatile fields apply without a restart because dsh-superagent reads them on each use; changing `stateDir` remounts the plugin. */
 export const Config = s.object({
-  stateDir: s.string().pattern(/^(\/|$)/).default(join(homedir(), '.dsh', 'superagent-general')).description('保存运行记录与任务文件的位置，留空使用默认目录。'),
+  stateDir: s.string().pattern(/^(\/|[A-Za-z]:[\\/]|\\\\|$)/).default(join(homedir(), '.dsh', 'superagent-general')).description('保存运行记录与任务文件的位置（POSIX 或 Windows 绝对路径），留空使用默认目录。Windows 路径为未验证支持。'),
   promptMaxChars: s.number().min(LIMITS.promptMaxChars.min).max(LIMITS.promptMaxChars.max).step(1).default(100000)
     .description('Largest saved prompt configuration, in characters.').volatile(),
   admissionContextMaxPages: s.number().min(LIMITS.admissionContextMaxPages.min).max(LIMITS.admissionContextMaxPages.max).step(1).default(10)
@@ -68,8 +68,16 @@ export interface FeishuBot { appSecret?: string; cli: string; appId: string; bra
 
 /** Resolve a command name or absolute path to an executable file, ignoring the worker shim directory. */
 export function executable(name: string, path: string, exclude?: string): string {
-  if (name.includes('/') && !isAbsolute(name)) throw new Error(`${name} must be a command name or an absolute path`)
-  const candidates = isAbsolute(name) ? [name] : path.split(delimiter).filter(dir => isAbsolute(dir) && !(exclude && sameDirectory(dir, exclude))).map(dir => join(dir, name))
+  const hasSeparator = name.includes('/') || name.includes('\\')
+  if (hasSeparator && !isAbsolute(name)) throw new Error(`${name} must be a command name or an absolute path`)
+  const directories = isAbsolute(name) ? [''] : path.split(delimiter).filter(dir => isAbsolute(dir) && !(exclude && sameDirectory(dir, exclude)))
+  // Windows command names may omit PATHEXT; `gh` has to find `gh.exe` or `gh.cmd`. This is best-effort and untested on Windows.
+  const extensions = process.platform === 'win32' ? (process.env.PATHEXT ?? '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean) : ['']
+  const candidates = directories.flatMap(dir => {
+    const base = dir ? join(dir, name) : name
+    const lower = base.toLowerCase()
+    return extensions.flatMap(ext => lower.endsWith(ext.toLowerCase()) ? [base] : [base + ext])
+  })
   for (const candidate of candidates) {
     try { if (statSync(candidate).isFile()) { accessSync(candidate, constants.X_OK); return candidate } }
     catch { /* Not an executable file here; try the next PATH directory. */ }
@@ -81,7 +89,8 @@ export type Probe = (argv: string[]) => Promise<string>
 /** Run startup checks through DSH's worker subprocess service with worker shims removed from PATH so a `gh` wrapper script reaches the real binary. */
 export function workerProbe(subprocess: SubprocessRuntime, stateDir: string, cwd: string, signal: AbortSignal): Probe {
   const path = withoutDirectory(process.env.PATH ?? '', workerBin(stateDir))
-  return argv => runAsWorker(subprocess, ['env', `PATH=${path}`, ...argv], cwd, AbortSignal.any([signal, AbortSignal.timeout(60_000)]))
+  // Pass PATH through DSH's spawn environment instead of the POSIX `env` helper, which does not exist on Windows.
+  return argv => runAsWorker(subprocess, argv, cwd, AbortSignal.any([signal, AbortSignal.timeout(60_000)]), { PATH: path })
 }
 
 const GithubUser = z.object({ login: z.string().regex(/^[A-Za-z0-9-]+$/), id: z.number().int().positive() })

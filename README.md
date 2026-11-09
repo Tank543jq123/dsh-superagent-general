@@ -1,5 +1,10 @@
 # dsh-superagent-general
 
+> **Windows support is best-effort and untested.** The POSIX deployment is the tested platform. A Windows branch uses
+> `isAbsolute`/PATHEXT and `.cmd` shims, but has not been run on Windows; it is provided for review only, with no compatibility
+> guarantee and no responsibility for results. Do not treat it as a completed platform abstraction.
+
+
 **简体中文** | [English](README.en.md)
 
 > 面向团队的通用 DSH SuperAgent：从 **GitHub、飞书、微信** 接收受权请求，按 Policy 判断是否接单，在独立的 DSH Worker Session 中执行，并把结果送回原对话。
