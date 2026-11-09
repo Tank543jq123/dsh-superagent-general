@@ -2,7 +2,7 @@
   "name": "dsh-superagent",
   "author": "dsh-superagent contributors; SuperAgent-General adaptation by ZhangJia (comeonzhj); upstream: DeepSeek Harness Team",
   "license": "MIT",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "A general proactive agent for DeepSeek Harness: GitHub, Feishu and Weixin Sources, Policy-gated tickets, and one DSH Session per ticket.",
   "type": "module",
@@ -18,7 +18,8 @@
     "./feishu-watch": "./lib/feishu-watch.js",
     "./weixin-watch": "./lib/weixin-watch.js",
     "./package.json": "./package.json",
-    "./locale/*.json": "./locale/*.json"
+    "./locale/*.json": "./locale/*.json",
+    "./cli-watch": "./lib/cli-watch.js"
   },
   "files": [
     "lib",

@@ -1,5 +1,17 @@
 # 变更记录
 
+## 2026-11-09 · 0.2.5
+
+### 新增 · 本地命令信道（`cli`）
+- 不需要 GitHub、飞书或微信即可开用：把一个 `.md`/`.txt` 文件丢进 `<stateDir>/cli-inbox/`，它就是一条指令；处理完移到 `cli-inbox-processed/<会话名>/`，回复写到 `cli-inbox-outbox/`。
+- 配置：`inboxDir`（默认 `cli-inbox`）、`conversation`（默认 `default`，同一会话名的多轮指令是连续线程）、`senderId`（默认 `cli-user`，策略的允许列表要包含它）、`extensions`、`keepReplies`、`pollSeconds`。
+- 回复文件用 message id 命名 —— `send` 的契约是按 id 幂等，重试会覆盖而不是留下两份。
+- 空文件留在原处不消费：更可能是还没写完，而不是有意留白。
+- 与其它 Source 一样通过 Policy 授权；文件本身不带身份，`senderId` 代表投递它的人。
+
+### 说明
+- 挂载点已加入 bundle（`cordis.patch.yml`）、构建入口（`tsdown.config.ts`）与 `package.json` exports；`tests/bundle-patch.spec.ts` 的行 id 断言同步更新。
+
 ## 2026-11-09 · 0.2.4
 
 ### 修复 · 派工落地
